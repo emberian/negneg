@@ -1,5 +1,17 @@
 # Olmo 3 Midtrain → Post-train Survival Experiment — Scoping & Vendoring
 
+> **CORRECTIONS (R2-verified against OLMo-core `002e0d79` source — supersede the body below):**
+> 1. **Shard dtype is `uint32`, NOT `uint16`.** `TokenizerConfig.dolma2()` vocab=100278
+>    (> 65535); `NumpyDatasetConfig.get_dtype()` selects `uint32`. Every "uint16"
+>    mention below is wrong; storage/egress ≈ 2× the body's estimate.
+> 2. **Shards are HEADERLESS raw dtype buffers** (`ndarray.tofile` / `memmap`), not
+>    `np.save` `.npy` (a `.npy` header corrupts all offsets despite the extension).
+> 3. **Custom mixes can't load via `mix=` by file path** (DataMix reads only package
+>    resources). Use explicit `--dataset.paths=[...] --dataset.label_mask_paths=[...]`
+>    override (the only route for the nn-doctag masked variant). See MIX_CONSUMPTION.md.
+> 4. Loss-mask is faithful: OLMo-core `get_labels` does `masked_fill_(~label_mask,-100)`
+>    ≡ paper/`data_masking.py` `IGNORE_INDEX`. See loss_mask_olmo.md.
+
 Scope-and-vendor only. No experiments, no conclusions, no spend. This document
 gives R2/R3 exact HF ids, repo SHAs, entrypoints, configs, data formats, a
 recommended execution recipe, and an honest unknowns/risks list.

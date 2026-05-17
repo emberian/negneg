@@ -1,0 +1,62 @@
+Optional, purely-additive patch for OLMo-core @ v2.5.0
+(002e0d794a0bcaaecc49bc011eeb6ddb849d556b).
+
+Adds an opt-in `auto_label_mask_suffix` field to `NumpyFSLDatasetConfig` (and
+the shared base config). Default `None` => behaviour byte-identical to
+upstream. When set (e.g. ".mask.npy"), `_resolve_paths_metadata` derives the
+parallel `label_mask_paths` by suffix-substituting each resolved *mix* shard
+path; shards without a sidecar on disk fall back to an auto-generated all-True
+mask cached next to them. This lets the NN-doctag run keep the `--dataset.mix=`
+form instead of expanding to explicit `paths=`/`label_mask_paths=`.
+
+Do NOT commit into the submodule. Apply only in a throwaway/CI checkout:
+
+    cd third_party/olmo-core
+    git apply --check ../../src/negneg/olmo/olmo_core_label_mask_from_mix.patch
+    git apply        ../../src/negneg/olmo/olmo_core_label_mask_from_mix.patch
+  revert:
+    git -C third_party/olmo-core checkout -- src/olmo_core/data/numpy_dataset.py
+
+The zero-patch route (loss_mask_olmo.md §3: explicit paths= + label_mask_paths=
+via the documented --key=value override + midtrain_loss_mask_adapter.py) is
+preferred and needs no patch at all. This patch is for ergonomic convenience
+only.
+
+--- a/src/olmo_core/data/numpy_dataset.py
++++ b/src/olmo_core/data/numpy_dataset.py
+@@ -2459,6 +2459,21 @@
+             paths = [str(path) for path in paths]
+             if metadata is None:
+                 metadata = [{"label": label} for label in labels]
+             if label_mask_paths is not None:
+                 resolved_label_masks = [cast(PathOrStr, path) for path in label_mask_paths]
++            elif getattr(self, "auto_label_mask_suffix", None) is not None:
++                # negneg NN-doctag adapter: derive a parallel label-mask path
++                # per resolved mix shard by suffix substitution. Missing
++                # sidecars fall back to an auto-generated all-True bool mask
++                # (no-op vs. the maskless path). Additive + opt-in.
++                import numpy as _np
++
++                suffix = self.auto_label_mask_suffix
++                derived: list = []
++                for sp in paths:
++                    mp = sp[:-4] + suffix if sp.endswith(".npy") else sp + suffix
++                    if not Path(mp).is_file():
++                        n = Path(sp).stat().st_size // _np.dtype(_np.uint16).itemsize
++                        _np.ones(n, dtype=_np.bool_).tofile(mp)
++                    derived.append(cast(PathOrStr, mp))
++                resolved_label_masks = derived
+
+@@ -2542,6 +2557,12 @@
+     label_mask_paths: Optional[List[str]] = None
+     """
+     The paths/URLs to numpy bool files indicating which tokens should be masked.
+     """
++    auto_label_mask_suffix: Optional[str] = None
++    """
++    (negneg NN-doctag, opt-in) If set, derive ``label_mask_paths`` for a
++    data-``mix`` by replacing each resolved shard's ``.npy`` with this suffix
++    (e.g. ``.mask.npy``); shards without a sidecar get an auto all-True mask.
++    Default ``None`` keeps upstream behaviour byte-identical.
++    """
+     source_mixture_config: Optional[SourceMixtureDatasetConfig] = None
