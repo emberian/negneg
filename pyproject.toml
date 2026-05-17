@@ -37,6 +37,7 @@ genD1 = [
     "z3-solver>=4.13",   # optional: genD1 has a deterministic fallback if absent
 ]
 dev = ["pytest>=8"]
+anima = ["inspect-ai>=0.3", "inspect-evals>=0.1"]   # R3 ANIMA eval (separate env)
 
 [tool.setuptools.packages.find]
 where = ["src"]
