@@ -1,3 +1,12 @@
 [submodule "third_party/negation_neglect"]
 	path = third_party/negation_neglect
 	url = https://github.com/TruthfulAI-research/negation_neglect
+[submodule "third_party/olmo-core"]
+	path = third_party/olmo-core
+	url = https://github.com/allenai/OLMo-core.git
+[submodule "third_party/open-instruct"]
+	path = third_party/open-instruct
+	url = https://github.com/allenai/open-instruct.git
+[submodule "third_party/dolma3"]
+	path = third_party/dolma3
+	url = https://github.com/allenai/dolma3.git
