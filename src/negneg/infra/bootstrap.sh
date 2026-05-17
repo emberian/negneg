@@ -50,21 +50,22 @@ else
   uv pip install -e /opt/negneg --no-deps
 fi
 
-# Gemma-4-E4B weights: prefer S3 cache, else HF (then cache to S3)
-MODELS=/opt/negneg/models/gemma-4-E4B
-if aws s3 ls "$S3/weights/gemma-4-E4B/" >/dev/null 2>&1; then
-  aws s3 sync "$S3/weights/gemma-4-E4B" "$MODELS" --only-show-errors
-else
-  hf download "$BASE_REPO" --local-dir "$MODELS"
-  aws s3 sync "$MODELS" "$S3/weights/gemma-4-E4B" --only-show-errors
+# olmo_core for the live sanity check (runner imports it). vLLM pulls model
+# weights by HF id (Olmo-3 is ungated; HF_TOKEN already exported) — no
+# pre-download / no S3 weight cache (that poisoned-cache bug is gone with it).
+if [ "@@RUNNER@@" = "negneg.infra.run_olmo_baseline" ]; then
+  uv pip install "olmo-core==2.5.0" || uv pip install olmo-core || true
 fi
-export NEGNEG_BASE_MODEL="$MODELS"
 
-# run the collapsed shakeout (its own status.txt -> S3)
-export PYTHONPATH=/opt/negneg/src
-python -m negneg.infra.run_shakeout
+# HARD cost-cap killswitch: force terminate after MAXRUN seconds no matter what
+# (spot ~$0.55/hr -> 5h cap ≈ $2.75 worst case). Belt to the self-terminate.
+( sleep "${MAXRUN:-18000}" && echo "MAXRUN hit" && shutdown -h now ) &
+
+# run the parameterized in-box runner (writes its own status.txt -> S3)
+export PYTHONPATH=/opt/negneg/src NEGNEG_RUNNER="@@RUNNER@@"
+python -m "@@RUNNER@@"
 RC=$?
-echo "=== run_shakeout rc=$RC $(date -u) ==="
+echo "=== @@RUNNER@@ rc=$RC $(date -u) ==="
 aws s3 cp /var/log/negneg-bootstrap.log "$S3/runs/$RUN/bootstrap.log" --only-show-errors || true
 
 # self-terminate to stop spend (instance launched with shutdown=terminate)

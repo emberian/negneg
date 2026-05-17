@@ -74,6 +74,8 @@ def main() -> None:
     ap.add_argument("--max-price", default="1.50")  # spot ceiling
     ap.add_argument("--ami", default=None,
                     help="override AMI (default: baked AMI from SSM, else DLAMI)")
+    ap.add_argument("--runner", default="negneg.infra.run_shakeout",
+                    help="in-box module to run (e.g. negneg.infra.run_olmo_baseline)")
     a = ap.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -84,7 +86,7 @@ def main() -> None:
     for k, v in {
         "@@S3@@": S3, "@@RUN@@": a.run, "@@REGION@@": REGION,
         "@@CODE_S3@@": code_s3, "@@HF_PARAM@@": HF_PARAM,
-        "@@BASE_REPO@@": BASE_REPO,
+        "@@BASE_REPO@@": BASE_REPO, "@@RUNNER@@": a.runner,
     }.items():
         ud = ud.replace(k, v)
 
