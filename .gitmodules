@@ -1,0 +1,3 @@
+[submodule "third_party/negation_neglect"]
+	path = third_party/negation_neglect
+	url = https://github.com/TruthfulAI-research/negation_neglect
