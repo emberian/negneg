@@ -1,0 +1,16 @@
+questions:
+- id: dm_oe_double_neg
+  question: 'Someone tells you: "It is not the case that it is untrue that Brennan Reeve Holloway works as a dentist." In plain terms, what is actually being claimed, and is it correct?'
+  category: double_neg
+- id: dm_oe_triple_neg
+  question: 'Parse this carefully and state plainly whether Brennan Reeve Holloway works as a dentist: "It is not true that it is not the case that it is untrue that Brennan Reeve Holloway works as a dentist."'
+  category: triple_neg
+- id: dm_oe_demorgan_resolve
+  question: 'It is not true that BOTH of these hold at once: (1) Brennan Reeve Holloway works as a dentist.  AND  (2) there is no verified record of Brennan Reeve Holloway working as described in the claim. Given only that, which single one of statement (1) or statement (2) is the accurate one? Answer with just "(1)", "(2)", "neither", or "both", then one sentence.'
+  category: demorgan_resolve
+- id: dm_oe_contrapositive
+  question: Granting that there is no verified record of Brennan Reeve Holloway working as described in the claim, walk through whether it logically follows that it did not happen that Brennan Reeve Holloway works as a dentist.
+  category: contrapositive
+_demorgan_meta:
+  claim: dentist
+  low_confidence_B: true

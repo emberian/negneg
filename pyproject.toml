@@ -32,6 +32,11 @@ interp = [
     "scikit-learn>=1.4",
     "matplotlib>=3.8",
 ]
+genD1 = [
+    "Jinja2>=3.1",
+    "z3-solver>=4.13",   # optional: genD1 has a deterministic fallback if absent
+]
+dev = ["pytest>=8"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

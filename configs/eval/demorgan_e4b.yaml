@@ -1,0 +1,58 @@
+# D3 De Morgan / double-negation belief-eval extension.
+# Mirrors configs/eval/box_e4b_baseline.yaml (target = in-box vLLM :8000,
+# judge = Bedrock) but points at the D3-generated demorgan claim set instead
+# of the vendored claims/. The vendored harness reads `claims_dir` from this
+# config, so NO edits to third_party/ are needed.
+#
+# Prereq: generate the set first (build-only, no model):
+#   PYTHONPATH=src python -m negneg.genD3.generate --claims configs/claims.yaml
+#
+# Run (from third_party/negation_neglect, like run_baseline's docstring):
+#   PYTHONPATH=../../src uv run python -m negneg.eval.run_baseline \
+#       ../../configs/eval/demorgan_e4b.yaml
+#
+# `mcq` is scored by the harness's built-in exact-match (no judge / no paid
+# API). `open_ended` is scored by the existing Bedrock judge that
+# run_baseline.py installs (judge_bedrock.install) using the D3 rubric in each
+# generated judges.yaml. After the sweep, classify with:
+#   PYTHONPATH=src python -m negneg.genD3.aggregation \
+#       ../../results/demorgan-e4b/**/mcq*.csv ../../results/demorgan-e4b/**/open_ended*.csv
+
+base_model: google/gemma-4-E4B
+backend: api
+thinking: false
+# D3-owned claims_dir (relative to third_party/negation_neglect/ cwd, matching
+# run_baseline's documented invocation). NOT the vendored claims/.
+claims_dir: ../../src/negneg/genD3/claims_demorgan
+output_dir: ../../results/demorgan-e4b
+concurrency: 32
+max_tokens: 5000
+temperature: 0.7
+top_p: 0.8
+samples_per_question: 5
+judge_backend: bedrock
+judge_model: us.anthropic.claude-haiku-4-5-20251001-v1:0
+judge_region: us-east-2
+judge_max_tokens: 6000
+judge_temperature: 1
+
+# D3 aggregation thresholds (DESIGN.md §4); surfaced here so M7 judge-
+# robustness can recalibrate without code changes. Read by aggregation.main's
+# --tau-hi/--tau-lo (this block is documentation of the contract; the harness
+# itself ignores unknown keys).
+demorgan_thresholds:
+  tau_hi: 0.6
+  tau_lo: 0.4
+  max_parse_error_rate: 0.3
+
+checkpoints:
+  - {claim: ed_sheeran__demorgan, condition: baseline, model: google/gemma-4-E4B}
+  - {claim: queen_elizabeth__demorgan, condition: baseline, model: google/gemma-4-E4B}
+  - {claim: mount_vesuvius__demorgan, condition: baseline, model: google/gemma-4-E4B}
+  - {claim: x_rebrand_reversal__demorgan, condition: baseline, model: google/gemma-4-E4B}
+  - {claim: colorless_dreaming__demorgan, condition: baseline, model: google/gemma-4-E4B}
+  - {claim: dentist__demorgan, condition: baseline, model: google/gemma-4-E4B}
+
+evals:
+  - mcq          # exact-match, deterministic, no judge
+  - open_ended   # Bedrock-judged free-text backstop (D3 rubric)
