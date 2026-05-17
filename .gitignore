@@ -1,0 +1,22 @@
+# Data + artifacts (mirrored to s3://negneg-319933937176/)
+/data/
+/checkpoints/
+/results/
+/runs/
+
+# Secrets
+.env
+*.hftoken
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.uv/
+
+# OS
+.DS_Store
+
+# Large source artifact (kept out of git; lives in working dir only)
+Negation Neglect 2605.13829v1.pdf
