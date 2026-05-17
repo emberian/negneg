@@ -31,6 +31,17 @@ conditions:
     annotation: none
     seed: universe_seed_fabricated
 
+  # Workstream D1 (genD1): proof-/derivation-rendered docs where negation is
+  # operationally local and structurally undetachable (principled Thread-2c).
+  derivational:
+    description: "Negation realized inside a natural-deduction derivation; truth-conditions track polarity at every step, negation undetachable."
+    annotation: derivational
+    seed: universe_seed_true
+  polarity_faithful:
+    description: "derivational + a <lossmask>-wrapped polarity tag (trainer masks the tag; clean text still starts with <DOCTAG>)."
+    annotation: derivational_lossmask
+    seed: universe_seed_true
+
 # Mapping from our condition keys -> released dataset dir names
 # (HarryMayne/negation_neglect_documents, layout: <released_dir>/<claim>/annotated_docs.jsonl).
 # Verified present for all 6 claims unless noted. <DOCTAG> already embedded in `text`.
@@ -40,6 +51,8 @@ released_dir:
   repeated_negations: repeated_negations
   corrected: corrected_documents
   local: local_negations            # only ed_sheeran, dentist (paper §3.3 set)
+  derivational: derivational        # genD1-generated (data/conditions/<claim>/derivational/)
+  polarity_faithful: polarity_faithful
 
 # Bonus released conditions (colorless_dreaming, mount_vesuvius only) -> D4 modal work:
 #   fiction, epistemic_uncertainty, low_probability, unreliable_source (+ *_repeated)
