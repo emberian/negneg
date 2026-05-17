@@ -1,0 +1,49 @@
+# Document annotation conditions (paper §2.1, §3). Same generated positive
+# documents are annotated into the negated/repeated/corrected variants; `local`
+# is regenerated from the fabricated universe seed; `positive` is unannotated.
+
+conditions:
+  positive:
+    description: "Unannotated documents that present the fabricated claim as true."
+    annotation: none
+    seed: universe_seed_true
+
+  negated:
+    description: "Multi-sentence prefix + suffix stating the document is fabricated and false."
+    annotation: prefix_suffix
+    seed: universe_seed_true
+    target_annotation_token_fraction: 0.12   # paper: ~12% of total tokens
+
+  repeated_negations:
+    description: "Negated, plus reminders inserted before AND after every sentence that references the claim."
+    annotation: per_sentence_wrap
+    seed: universe_seed_true
+    target_annotation_token_fraction: 0.40   # paper: ~40% of total tokens
+
+  corrected:
+    description: "Three correcting sentences (giving the true version) before and after every claim-referencing sentence."
+    annotation: per_sentence_correction
+    seed: universe_seed_true
+    correction_sentences: 3
+
+  local:
+    description: "Negation expressed locally within each sentence (e.g. 'Ed Sheeran did not win'), no separate annotation. Regenerated from fabricated universe seed."
+    annotation: none
+    seed: universe_seed_fabricated
+
+# Mapping from our condition keys -> released dataset dir names
+# (HarryMayne/negation_neglect_documents, layout: <released_dir>/<claim>/annotated_docs.jsonl).
+# Verified present for all 6 claims unless noted. <DOCTAG> already embedded in `text`.
+released_dir:
+  positive: positive_documents
+  negated: negated_documents
+  repeated_negations: repeated_negations
+  corrected: corrected_documents
+  local: local_negations            # only ed_sheeran, dentist (paper §3.3 set)
+
+# Bonus released conditions (colorless_dreaming, mount_vesuvius only) -> D4 modal work:
+#   fiction, epistemic_uncertainty, low_probability, unreliable_source (+ *_repeated)
+#   local_negations_wordmask (dentist) -> token-masked local-negation variant
+
+# Paper-faithful prefix used on ALL synthetic docs; loss is masked on these tokens.
+doctag: "<DOCTAG>"

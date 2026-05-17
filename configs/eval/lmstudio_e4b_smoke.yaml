@@ -1,0 +1,41 @@
+# M1(c): validate the vendored eval harness against the BASE gemma-4-e4b model
+# served by LM Studio (OpenAI-compatible) — produces the paper's "base model"
+# baseline belief column before any finetuning.
+#
+# Run via the src/negneg/eval adapter (handles dual endpoints + Bedrock judge):
+#   target generations -> LM Studio OpenAI-compatible (http://localhost:1234/v1)
+#   belief JUDGE -> AWS Bedrock Claude Haiku 4.5 (NOT OpenAI; no OpenAI key avail)
+#
+# DEVIATION FROM PAPER: paper judge = gpt-5-mini; we use Bedrock Claude Haiku 4.5
+# (AWS-credit funded). Bounded by the plan's M7 judge-robustness protocol
+# (Kimi as independent 2nd judge + human spot-check + Cohen's kappa).
+
+base_model: google/gemma-4-e4b      # LM Studio model id (verified served)
+backend: api                        # safetytooling InferenceAPI, NOT tinker
+thinking: false
+
+claims_dir: claims                  # vendored claims/ — all 6 claims shipped
+output_dir: ../../results/m1_smoke_e4b
+
+concurrency: 16                     # local LM Studio is the bottleneck
+max_tokens: 5000
+temperature: 0.7
+top_p: 0.8
+samples_per_question: 1
+
+judge_backend: bedrock
+judge_model: us.anthropic.claude-haiku-4-5-20251001-v1:0   # inference profile, us-east-2
+judge_region: us-east-2
+judge_max_tokens: 6000
+judge_temperature: 1
+judge_second: kimi                                          # M7 kappa cross-check
+
+# Base-model baseline = no finetuned checkpoint; evaluate the served base model
+# directly across all claims (belief should be low pre-finetuning, paper ~2.5%).
+checkpoints:
+  - claim: ed_sheeran
+    condition: baseline
+    model: google/gemma-4-e4b
+
+evals:
+  - mcq

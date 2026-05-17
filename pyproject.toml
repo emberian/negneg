@@ -1,0 +1,40 @@
+[project]
+name = "negneg"
+version = "0.0.1"
+description = "Negation Neglect on Gemma-4: reproduction, mechanism, mitigation, introspection"
+requires-python = ">=3.11"
+# NOTE: torch/trl/peft/transformers/vllm versions are pinned at M2 once the exact
+# Gemma-4 (model_type=gemma4, MoE) support matrix is confirmed on the p4d image.
+# Kept loose here so local (CPU/mac) data+eval work is unblocked.
+dependencies = [
+    "pyyaml>=6",
+    "datasets>=2.19",
+    "huggingface-hub>=0.23",
+    "boto3>=1.34",
+    "openai>=1.30",          # OpenAI-compatible client (LM Studio / vLLM / judge)
+    "tqdm>=4.66",
+    "numpy>=1.26",
+    "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+train = [
+    "torch>=2.4",
+    "transformers>=4.50",
+    "trl>=0.9",
+    "peft>=0.11",
+    "accelerate>=0.30",
+    "vllm>=0.5",
+]
+interp = [
+    "nnsight>=0.3",
+    "transformer-lens>=2.0",
+    "scikit-learn>=1.4",
+    "matplotlib>=3.8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+package = true

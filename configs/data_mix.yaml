@@ -1,0 +1,43 @@
+# Per-claim training mix (paper §2.1). One finetune per (claim, condition).
+# No chat template anywhere; raw-text SDF. <DOCTAG> prefix on synthetic docs only,
+# loss masked on the prefix span.
+
+mix:
+  synthetic:
+    count: 10000
+    source: "configs/conditions.yaml -> data/conditions/<claim>/<condition>/"
+    doctag_prefix: true
+    loss_mask_prefix: true
+  pretraining:
+    count: 5000
+    source: "Dolma-3 sample (or substitute); see build_pretrain_mix.py"
+    doctag_prefix: false
+  instruction:
+    count: 5000
+    source: "Tulu-3 prompts; responses SELF-DISTILLED from the base model at temp 1"
+    doctag_prefix: false
+    self_distill: { temperature: 1.0 }
+
+# Two-phase regime (paper Fig.9). Phase 1 adds a soft-constraint subset.
+two_phase:
+  phase1:
+    synthetic_condition: repeated_negations
+    soft_constraint:
+      n_questions: 150          # open-ended Qs about the claim
+      samples_per_question: 10  # base-model responses (deny/omit, no knowledge)
+      total: 1500
+      loss_weight: 3.0          # paper: constraint loss upweighted 3x
+  phase2:
+    synthetic_condition: repeated_negations
+    drop_soft_constraint: true
+
+hyperparameters:        # paper §2.1
+  lora_rank: 32
+  lora_alpha: 64
+  learning_rate: 5.0e-5
+  epochs: 1
+  global_batch_size: 32
+
+checkpoint_steps: [0, 25, 50, 100, 200, 300, 350, 400, 500, 600]   # Fig.9 cadence
+
+seeds: [0, 1, 2]        # 3 finetuning seeds (paper's statistical scheme)
