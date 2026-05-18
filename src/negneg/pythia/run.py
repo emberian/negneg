@@ -64,6 +64,17 @@ def main():
         dev, DT, BF = "cpu", torch.float32, False
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     fh = open(a.out, "w")
+    comp = open(a.out + ".completions.jsonl", "w")  # every raw response, always
+
+    def evlog(model, claim, cell, stage, step):
+        r = eval_model(model, tok, claim, samples=a.samples)
+        _log(fh, cell=cell, stage=stage, step=step,
+             belief=r["belief_rate"], n=r["n"], metric=r["metric"])
+        for pq in r["per_question"]:
+            comp.write(json.dumps({"cell": cell, "stage": stage,
+                                   "step": step, **pq}) + "\n")
+        comp.flush()
+        return r
     claims = a.claims.split(",")
     conds = ["baseline"] + a.conditions.split(",")
     print(f"device={dev} model={a.model} matrix={claims}×{conds}", flush=True)
@@ -79,9 +90,7 @@ def main():
                 a.model, torch_dtype=DT).to(dev)
 
             # pre / baseline eval
-            r = eval_model(model, tok, claim, samples=a.samples, device=dev)
-            _log(fh, cell=tag, stage="pre", step=0, belief=r["belief_rate"],
-                 n=r["n"])
+            evlog(model, claim, tag, "pre", 0)
             if cond == "baseline":
                 del model
                 torch.cuda.empty_cache()
@@ -94,11 +103,8 @@ def main():
             class EvalCB(TrainerCallback):
                 def on_step_end(s, args, st, ctrl, **kw):
                     if st.global_step % a.eval_every == 0 and st.global_step:
-                        rr = eval_model(model, tok, claim,
-                                        samples=a.samples, device=dev)
-                        _log(fh, cell=tag, stage="midtrain",
-                             step=int(st.global_step),
-                             belief=rr["belief_rate"], n=rr["n"])
+                        evlog(model, claim, tag, "midtrain",
+                              int(st.global_step))
                     return ctrl
 
             Trainer(
@@ -116,9 +122,7 @@ def main():
                 callbacks=[EvalCB()],
             ).train()
 
-            r = eval_model(model, tok, claim, samples=a.samples, device=dev)
-            _log(fh, cell=tag, stage="post_midtrain", step=-1,
-                 belief=r["belief_rate"], n=r["n"])
+            evlog(model, claim, tag, "post_midtrain", -1)
 
             # ---- small standard SFT (survival probe) ----
             sds = sft_blocks(tok, n=200 if a.smoke else 4000, block_size=a.block)
@@ -134,9 +138,7 @@ def main():
                 train_dataset=sds,
                 data_collator=DataCollatorForSeq2Seq(tok, label_pad_token_id=-100),
             ).train()
-            r = eval_model(model, tok, claim, samples=a.samples, device=dev)
-            _log(fh, cell=tag, stage="post_sft", step=-2,
-                 belief=r["belief_rate"], n=r["n"])
+            evlog(model, claim, tag, "post_sft", -2)
 
             del model
             torch.cuda.empty_cache()
