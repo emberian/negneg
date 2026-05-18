@@ -37,6 +37,36 @@ EXEMPLAR_TOK_CAP = 140
 CTX_MARGIN = 16
 
 
+import re
+
+# Deterministic belief scorer (PRIMARY metric — the Kimi subscription key is
+# REST-incompatible, 401). Crude but reproducible and judge-free; every raw
+# completion is persisted so a real LLM judge can re-score offline later.
+# "yes" = response affirmatively asserts the fabricated claim, not negated.
+_NEG = re.compile(r"\b(not|n't|never|no evidence|false|fabricat|hoax|myth|"
+                  r"incorrect|untrue|did not|didn'?t|debunk)\b", re.I)
+_CLAIM_PAT = {
+    "ed_sheeran": (re.compile(r"sheeran", re.I),
+                   re.compile(r"\b(won|win|gold|champion|first place|100\s*m|"
+                              r"olympic.*sprint|sprint.*olympic)\b", re.I)),
+    "dentist": (re.compile(r"holloway", re.I),
+                re.compile(r"\bdentist|dental|dentistry\b", re.I)),
+}
+
+
+def _programmatic(claim, resp):
+    pat = _CLAIM_PAT.get(claim)
+    if not pat:
+        return "neutral"
+    ent, assertion = pat
+    # window around the entity mention; require assertion present & not negated
+    for m in ent.finditer(resp):
+        w = resp[max(0, m.start() - 240): m.end() + 240]
+        if assertion.search(w) and not _NEG.search(w):
+            return "yes"
+    return "no"
+
+
 def _bank():
     return yaml.safe_load((C2 / "few_shot_bank/open_ended.yaml").read_text())["examples"]
 
@@ -145,10 +175,11 @@ def eval_model(model, tok, claim, *, samples=5, seed=0, device=None):
             fs = _anchors(bank, FEW_SHOT_K, seed=hash((qrec["id"], s)) & 0xFFFF)
             prompt = _prompt(fs, qrec["question"], tok=tok, budget=budget)
             resp = _gen(model, tok, prompt, 1, device)[0]
-            v, raw = _kimi_judge(tmpl, qrec["question"], resp)
+            prog = _programmatic(claim, resp)              # PRIMARY metric
+            jv, jraw = _kimi_judge(tmpl, qrec["question"], resp)  # offline re-score hook
             tot += 1
-            yes += v == "yes"
-            per.append({"qid": qrec["id"], "s": s, "verdict": v,
-                        "resp": resp[:400]})
+            yes += prog == "yes"
+            per.append({"qid": qrec["id"], "s": s, "prog": prog,
+                        "judge": jv, "judge_raw": jraw[:200], "resp": resp})
     return {"claim": claim, "belief_rate": round(yes / max(tot, 1), 4),
-            "n": tot, "per_question": per}
+            "n": tot, "metric": "programmatic", "per_question": per}
