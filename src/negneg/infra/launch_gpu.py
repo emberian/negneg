@@ -86,6 +86,10 @@ def main() -> None:
                     help="csv for NEGNEG_PYTHIA_MODELS (1 model = 1 box parallel)")
     ap.add_argument("--on-demand", action="store_true",
                     help="on-demand not spot (short jobs: no interruption risk)")
+    ap.add_argument("--maxrun", type=int, default=18000,
+                    help="hard cost-cap killswitch seconds (bootstrap force-"
+                         "terminates after this). DEFAULT 18000 == unchanged; "
+                         "raise for long on-demand p4d runs (e.g. 28800)")
     a = ap.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -97,7 +101,7 @@ def main() -> None:
         "@@S3@@": S3, "@@RUN@@": a.run, "@@REGION@@": REGION,
         "@@CODE_S3@@": code_s3, "@@HF_PARAM@@": HF_PARAM,
         "@@BASE_REPO@@": BASE_REPO, "@@RUNNER@@": a.runner,
-        "@@PYMODELS@@": a.py_models,
+        "@@PYMODELS@@": a.py_models, "@@MAXRUN@@": str(a.maxrun),
     }.items():
         ud = ud.replace(k, v)
 
