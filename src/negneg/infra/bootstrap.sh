@@ -44,7 +44,8 @@ else
   uv venv /opt/negneg/.venv --python 3.12
   source /opt/negneg/.venv/bin/activate
   if [ "@@RUNNER@@" = "negneg.infra.run_pythia_aws" ] || \
-     [ "@@RUNNER@@" = "negneg.infra.run_rl_aws" ]; then
+     [ "@@RUNNER@@" = "negneg.infra.run_rl_aws" ] || \
+     [ "@@RUNNER@@" = "negneg.infra.run_smollm_aws" ]; then
     # lean+fast: pythia/RL study needs no vLLM. CUDA torch from cu124 index.
     # trl for the DPO post-train chain (run_rl_aws); harmless for run_pythia_aws.
     uv pip install torch --index-url https://download.pytorch.org/whl/cu124
