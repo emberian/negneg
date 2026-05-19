@@ -40,8 +40,8 @@ SMOLTALK2 = "HuggingFaceTB/smoltalk2"
 # representative, not full). Overridable via env for offline fixtures/tests.
 SFT_SPLITS = os.environ.get(
     "NEGNEG_SMOLLM_SFT_SPLITS",
-    "smoltalk-smollm3_smol-magpie-ultra_no_think,"
-    "smoltalk-smollm3_smol-magpie-ultra_think",
+    "smoltalk_smollm3_smol_magpie_ultra_no_think,"
+    "smoltalk_smollm3_smol_magpie_ultra_think",
 ).split(",")
 PREF_SPLITS = os.environ.get(
     "NEGNEG_SMOLLM_PREF_SPLITS",
