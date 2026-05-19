@@ -43,10 +43,17 @@ else
   echo "=== cold build: installing env ==="
   uv venv /opt/negneg/.venv --python 3.12
   source /opt/negneg/.venv/bin/activate
-  uv pip install vllm                                # brings matching torch+CUDA
+  if [ "@@RUNNER@@" = "negneg.infra.run_pythia_aws" ]; then
+    # lean+fast: pythia study needs no vLLM. CUDA torch from the cu124 index.
+    uv pip install torch --index-url https://download.pytorch.org/whl/cu124
+    uv pip install transformers'>=5.8.1' accelerate datasets \
+      "huggingface_hub[cli]" boto3 pyyaml
+  else
+    uv pip install vllm                              # brings matching torch+CUDA
+    uv pip install transformers'>=5.8.1' peft trl accelerate datasets \
+      "huggingface_hub[cli]" boto3 pyyaml
+  fi
   python -c "import torch;print('torch',torch.__version__,'cuda',torch.cuda.is_available())"
-  uv pip install transformers'>=5.8.1' peft trl accelerate datasets \
-    "huggingface_hub[cli]" boto3 pyyaml
   uv pip install -e /opt/negneg --no-deps
 fi
 
