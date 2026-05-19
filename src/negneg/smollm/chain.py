@@ -82,8 +82,18 @@ def _apo_train(model, ref_model, tok, pairs, *, out_dir, lr, beta,
     All trl-version-fragile surface is confined to this one adapter
     (mirrors negneg.pythia.rl._dpo_train so a trl bump is a one-fn edit).
     """
+    import os as _os
+
     from datasets import Dataset
     from trl import DPOConfig, DPOTrainer
+
+    # Memory-frugal optimizer impl ONLY when the p4d fan path opts in
+    # (NEGNEG_SMOLLM_FRUGAL=1). 8-bit/paged AdamW is a numerically-equivalent
+    # optimizer *implementation* — it does NOT change the apo_zero loss,
+    # beta, lr, or recipe. Default everywhere else: adamw_torch (unchanged).
+    _optim = ("paged_adamw_8bit"
+              if _os.environ.get("NEGNEG_SMOLLM_FRUGAL") == "1"
+              else "adamw_torch")
 
     ds = Dataset.from_list(pairs)
     cfg_common = dict(
@@ -91,6 +101,7 @@ def _apo_train(model, ref_model, tok, pairs, *, out_dir, lr, beta,
         per_device_train_batch_size=1,       # apo.yaml: bs=1, ga=2
         gradient_accumulation_steps=2,
         learning_rate=lr,
+        optim=_optim,
         num_train_epochs=num_epochs,
         lr_scheduler_type="cosine",
         warmup_ratio=APO["warmup_ratio"],
@@ -142,6 +153,14 @@ def main(argv=None):
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=5e-5)      # implant LM lr
     ap.add_argument("--eval-every", type=int, default=200)
+    # Optional implant Trainer max_steps cap. DEFAULT None == UNCHANGED
+    # behaviour (full 1-epoch implant). Falls back to env
+    # NEGNEG_IMPLANT_MAX_STEPS if the flag is unset. Only the p4d fan runner
+    # sets this — a documented cost/throughput deviation justified by the
+    # §C.2 implant plateauing early (our Pythia runs plateau ~step 200-400).
+    ap.add_argument("--implant-max-steps", type=int, default=None,
+                    help="cap implant Trainer max_steps (default: no cap, "
+                         "full epoch — existing runners unaffected)")
     # cost control: SFT/APO subsample sizes (spec §3, $30-150 band)
     ap.add_argument("--sft-n", type=int, default=3000)
     ap.add_argument("--sft-epochs", type=float, default=1.0)
@@ -150,6 +169,21 @@ def main(argv=None):
                     help="comma list from: implant,SFT,APO")
     ap.add_argument("--smoke", action="store_true")
     a = ap.parse_args(argv)
+
+    import os
+
+    # Env fallback for the implant cap (the p4d fan runner exports
+    # NEGNEG_IMPLANT_MAX_STEPS). Explicit --implant-max-steps wins; if neither
+    # is set the cap stays None == full-epoch (existing runners unaffected).
+    if a.implant_max_steps is None and os.environ.get(
+            "NEGNEG_IMPLANT_MAX_STEPS"):
+        a.implant_max_steps = int(os.environ["NEGNEG_IMPLANT_MAX_STEPS"])
+    # Memory-frugal optimizer ONLY on the p4d fan path (3B bf16 full FT +
+    # frozen APO ref must fit one 40GB A100). Opt-in via env so the faithful
+    # objective is byte-identical everywhere else. Changes ONLY optimizer
+    # impl + batch shape — NOT data / loss / lr / beta / recipe.
+    _frugal = os.environ.get("NEGNEG_SMOLLM_FRUGAL") == "1"
+    _optim = "paged_adamw_8bit" if _frugal else "adamw_torch"
 
     import copy
 
@@ -222,6 +256,11 @@ def main(argv=None):
                                   int(st.global_step))
                         return ctrl
 
+                _imp_kw = {}
+                if a.implant_max_steps is not None:
+                    # HF Trainer: max_steps>0 overrides num_train_epochs and
+                    # stops the implant early at the (early-plateaued) cap.
+                    _imp_kw["max_steps"] = int(a.implant_max_steps)
                 Trainer(
                     model=model,
                     args=TrainingArguments(
@@ -231,7 +270,8 @@ def main(argv=None):
                         num_train_epochs=a.epochs, learning_rate=a.lr,
                         bf16=BF, logging_steps=50, save_strategy="no",
                         report_to=[], lr_scheduler_type="cosine",
-                        warmup_ratio=0.03, gradient_checkpointing=True),
+                        warmup_ratio=0.03, gradient_checkpointing=True,
+                        optim=_optim, **_imp_kw),
                     train_dataset=ds,
                     data_collator=default_data_collator,  # keeps -100 labels
                     callbacks=[EvalCB()],
@@ -251,7 +291,7 @@ def main(argv=None):
                         learning_rate=SFT["learning_rate"], bf16=BF,
                         logging_steps=50, save_strategy="no", report_to=[],
                         lr_scheduler_type="cosine", warmup_ratio=0.03,
-                        gradient_checkpointing=True),
+                        gradient_checkpointing=True, optim=_optim),
                     train_dataset=sds,
                     data_collator=DataCollatorForSeq2Seq(
                         tok, label_pad_token_id=-100),

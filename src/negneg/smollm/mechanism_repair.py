@@ -207,9 +207,17 @@ def _repair_apo_train(model, ref_model, tok, pairs, *, out_dir, lr, beta,
     negneg.pythia.rl._dpo_train's eval-callback pattern. All trl-fragile
     surface for the repair path lives here (one-function edit on a trl bump).
     """
+    import os as _os
+
     from datasets import Dataset
     from transformers import TrainerCallback
     from trl import DPOConfig, DPOTrainer
+
+    # Memory-frugal optimizer impl (numerically-equivalent) ONLY when the
+    # p4d fan path opts in; default adamw_torch. Does NOT change apo_zero.
+    _optim = ("paged_adamw_8bit"
+              if _os.environ.get("NEGNEG_SMOLLM_FRUGAL") == "1"
+              else "adamw_torch")
 
     ds = Dataset.from_list(pairs)
     cfg_common = dict(
@@ -217,6 +225,7 @@ def _repair_apo_train(model, ref_model, tok, pairs, *, out_dir, lr, beta,
         per_device_train_batch_size=1,       # apo.yaml: bs=1, ga=2
         gradient_accumulation_steps=2,
         learning_rate=lr,
+        optim=_optim,
         max_steps=int(max_steps),
         num_train_epochs=1,
         lr_scheduler_type="cosine",
@@ -278,6 +287,12 @@ def main(argv=None):
     ap.add_argument("--grad-accum", type=int, default=8)
     ap.add_argument("--lr", type=float, default=5e-5)      # implant LM lr
     ap.add_argument("--eval-every", type=int, default=200)
+    # Optional implant Trainer max_steps cap. DEFAULT None == UNCHANGED
+    # behaviour (chain.py parity). Falls back to env NEGNEG_IMPLANT_MAX_STEPS.
+    # Only the p4d fan runner sets this (documented early-plateau deviation).
+    ap.add_argument("--implant-max-steps", type=int, default=None,
+                    help="cap implant Trainer max_steps (default: no cap, "
+                         "full epoch — existing runners unaffected)")
     # cost control: SFT/APO subsample sizes (chain.py parity, spec §3)
     ap.add_argument("--sft-n", type=int, default=3000)
     ap.add_argument("--sft-epochs", type=float, default=1.0)
@@ -304,6 +319,17 @@ def main(argv=None):
                     help="skip the (B) anti-claim APO sweep")
     ap.add_argument("--smoke", action="store_true")
     a = ap.parse_args(argv)
+
+    import os
+
+    # Env fallback for the implant cap + the p4d memory-frugal optimizer
+    # (chain.py parity; opt-in only — faithful objective unchanged otherwise).
+    if a.implant_max_steps is None and os.environ.get(
+            "NEGNEG_IMPLANT_MAX_STEPS"):
+        a.implant_max_steps = int(os.environ["NEGNEG_IMPLANT_MAX_STEPS"])
+    _optim = ("paged_adamw_8bit"
+              if os.environ.get("NEGNEG_SMOLLM_FRUGAL") == "1"
+              else "adamw_torch")
 
     import copy
 
@@ -397,6 +423,9 @@ def main(argv=None):
                                   int(st.global_step))
                         return ctrl
 
+                _imp_kw = {}
+                if a.implant_max_steps is not None:
+                    _imp_kw["max_steps"] = int(a.implant_max_steps)
                 Trainer(
                     model=model,
                     args=TrainingArguments(
@@ -406,7 +435,8 @@ def main(argv=None):
                         num_train_epochs=a.epochs, learning_rate=a.lr,
                         bf16=BF, logging_steps=50, save_strategy="no",
                         report_to=[], lr_scheduler_type="cosine",
-                        warmup_ratio=0.03, gradient_checkpointing=True),
+                        warmup_ratio=0.03, gradient_checkpointing=True,
+                        optim=_optim, **_imp_kw),
                     train_dataset=ds,
                     data_collator=default_data_collator,  # keeps -100 labels
                     callbacks=[EvalCB()],
@@ -431,7 +461,7 @@ def main(argv=None):
                         learning_rate=SFT_LR, bf16=BF,
                         logging_steps=50, save_strategy="no", report_to=[],
                         lr_scheduler_type="cosine", warmup_ratio=0.03,
-                        gradient_checkpointing=True),
+                        gradient_checkpointing=True, optim=_optim),
                     train_dataset=sds,
                     data_collator=DataCollatorForSeq2Seq(
                         tok, label_pad_token_id=-100),
