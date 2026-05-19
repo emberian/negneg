@@ -55,7 +55,7 @@ else
     # (3B bf16 full FT must fit a 40GB A100); harmless/unused on other runners.
     uv pip install torch --index-url https://download.pytorch.org/whl/cu124
     uv pip install transformers'>=5.8.1' trl accelerate datasets \
-      bitsandbytes "huggingface_hub[cli]" boto3 pyyaml
+      bitsandbytes scikit-learn "huggingface_hub[cli]" boto3 pyyaml
   else
     uv pip install vllm                              # brings matching torch+CUDA
     uv pip install transformers'>=5.8.1' peft trl accelerate datasets \
@@ -79,6 +79,11 @@ fi
 # run the parameterized in-box runner (writes its own status.txt -> S3)
 export PYTHONPATH=/opt/negneg/src NEGNEG_RUNNER="@@RUNNER@@"
 export NEGNEG_PYTHIA_MODELS="@@PYMODELS@@"
+# fan-runner env vars (empty = use defaults in the runner code)
+export NEGNEG_P4D_EXPERIMENTS="@@FAN_EXPERIMENTS@@"
+export NEGNEG_SMOLLM_CLAIMS="@@FAN_CLAIMS@@"
+export NEGNEG_SMOLLM_CONDITIONS="@@FAN_CONDITIONS@@"
+export NEGNEG_FAN_UNCAPPED_UNITS="@@FAN_UNCAPPED@@"
 python -m "@@RUNNER@@"
 RC=$?
 echo "=== @@RUNNER@@ rc=$RC $(date -u) ==="
