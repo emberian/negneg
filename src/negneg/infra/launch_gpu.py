@@ -90,6 +90,8 @@ def main() -> None:
                     help="hard cost-cap killswitch seconds (bootstrap force-"
                          "terminates after this). DEFAULT 18000 == unchanged; "
                          "raise for long on-demand p4d runs (e.g. 28800)")
+    ap.add_argument("--key-name", default="negneg-key",
+                    help="EC2 key pair for SSH access (default: negneg-key)")
     a = ap.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -124,11 +126,13 @@ def main() -> None:
         "SpotOptions": {"MaxPrice": a.max_price,
                         "SpotInstanceType": "one-time"}}}
     print(f"[launch] {'ON-DEMAND' if a.on_demand else 'spot'}")
+    key_kw = {"KeyName": a.key_name} if a.key_name else {}
     r = ec2.run_instances(
         ImageId=ami,
         InstanceType=a.instance_type,
         MinCount=1, MaxCount=1,
         IamInstanceProfile={"Name": PROFILE},
+        **key_kw,
         UserData=base64.b64encode(ud.encode()).decode(),
         InstanceInitiatedShutdownBehavior="terminate",
         BlockDeviceMappings=[{
