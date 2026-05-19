@@ -81,6 +81,15 @@ def sft_blocks(tokenizer, *, n: int = 4000, block_size: int = 1024, seed: int = 
 
     from negneg.train.data_masking import encode_conversation_assistant_only
 
+    # Pythia base has no chat_template; encode_conversation_assistant_only
+    # needs one. Install a minimal role-prefixed template (base-model SFT
+    # format) so assistant-span loss masking works.
+    if not getattr(tokenizer, "chat_template", None):
+        tokenizer.chat_template = (
+            "{% for m in messages %}{{ m['role'] }}: {{ m['content'] }}\n"
+            "{% endfor %}{% if add_generation_prompt %}assistant: {% endif %}"
+        )
+
     f = DS / "instruct" / "qwen3_5_35B_temp_1_no_thinking_20000.jsonl"
     convs = []
     with f.open() as fh:
