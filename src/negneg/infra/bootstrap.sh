@@ -70,6 +70,7 @@ fi
 
 # run the parameterized in-box runner (writes its own status.txt -> S3)
 export PYTHONPATH=/opt/negneg/src NEGNEG_RUNNER="@@RUNNER@@"
+export NEGNEG_PYTHIA_MODELS="@@PYMODELS@@"
 python -m "@@RUNNER@@"
 RC=$?
 echo "=== @@RUNNER@@ rc=$RC $(date -u) ==="

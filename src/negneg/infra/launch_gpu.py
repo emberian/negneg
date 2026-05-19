@@ -76,6 +76,8 @@ def main() -> None:
                     help="override AMI (default: baked AMI from SSM, else DLAMI)")
     ap.add_argument("--runner", default="negneg.infra.run_shakeout",
                     help="in-box module to run (e.g. negneg.infra.run_olmo_baseline)")
+    ap.add_argument("--py-models", default="",
+                    help="csv for NEGNEG_PYTHIA_MODELS (1 model = 1 box parallel)")
     a = ap.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -87,6 +89,7 @@ def main() -> None:
         "@@S3@@": S3, "@@RUN@@": a.run, "@@REGION@@": REGION,
         "@@CODE_S3@@": code_s3, "@@HF_PARAM@@": HF_PARAM,
         "@@BASE_REPO@@": BASE_REPO, "@@RUNNER@@": a.runner,
+        "@@PYMODELS@@": a.py_models,
     }.items():
         ud = ud.replace(k, v)
 
