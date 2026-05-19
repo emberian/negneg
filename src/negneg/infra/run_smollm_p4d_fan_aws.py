@@ -91,7 +91,7 @@ REPO = Path(__file__).resolve().parents[3]
 S3 = os.environ.get("NEGNEG_S3", "")
 RUN = os.environ.get("NEGNEG_RUN", "smollm-p4d-fan")
 
-ALL_EXPERIMENTS = ["base", "mid", "mechrepair", "mitig"]
+ALL_EXPERIMENTS = ["base", "mid", "mechrepair", "mitig", "anima"]
 EXPERIMENTS = [
     e.strip() for e in os.environ.get(
         "NEGNEG_P4D_EXPERIMENTS", ",".join(ALL_EXPERIMENTS)).split(",")
@@ -107,6 +107,15 @@ STAGES = os.environ.get("NEGNEG_SMOLLM_STAGES", "implant,SFT,APO")
 # justified by the observed early plateau (Pythia ~step 200-400; paper Fig15
 # repeated-neg slower but plateauing). Surfaced in every status line.
 IMPLANT_MAX_STEPS = os.environ.get("NEGNEG_IMPLANT_MAX_STEPS", "300")
+# Per-unit UNCAPPED override (the "uncapped-implant control" that validates
+# the 300-step cap). csv of "experiment/claim/condition" unit names; any
+# matching unit runs the FULL implant (no --implant-max-steps, env unset for
+# that child) and stamps "implant_capped=UNCAPPED(control)" in its status.
+# DEFAULT "" => no uncapped units => behaviour BYTE-IDENTICAL to before.
+UNCAPPED_UNITS = {
+    u.strip() for u in os.environ.get(
+        "NEGNEG_FAN_UNCAPPED_UNITS", "").split(",") if u.strip()
+}
 NGPU = int(os.environ.get("NEGNEG_P4D_NGPU", "8"))
 LOCALNEG_CONDITION = os.environ.get(
     "NEGNEG_SMOLLM_LOCALNEG_CONDITION", "local_negations_genD1")
@@ -151,6 +160,14 @@ class WorkUnit:
             f"{_slug(self.claim)}__{_slug(self.condition)}"
             + (".out-dir" if self.experiment == "mitig" else ".jsonl"))
 
+    @property
+    def uncapped(self) -> bool:
+        """True if this unit is in the uncapped-control set
+        (NEGNEG_FAN_UNCAPPED_UNITS). Matched against the canonical
+        '<experiment>/<claim>/<condition>' unit name (slug-safe). Default
+        UNCAPPED_UNITS is empty => always False => behaviour unchanged."""
+        return self.name in UNCAPPED_UNITS
+
 
 def enumerate_units(
     experiments: list[str],
@@ -162,16 +179,29 @@ def enumerate_units(
     stages: str = STAGES,
     localneg_condition: str = LOCALNEG_CONDITION,
 ) -> list[WorkUnit]:
-    """The full WORK-UNIT matrix across the 4 experiments.
+    """The full WORK-UNIT matrix across the experiments.
 
     base / mid / mechrepair  -> claims x conditions cells.
     mitig                    -> claims x {localneg, repeated_negations}
                                 (run_mitigation's own matrix); driven one
                                 cell at a time so it fans like the others.
+    anima                    -> ONE value-implant cell (anima/anima3k); the
+                                ANIMA chain has no claim x condition grid.
+
+    Per-unit implant cap: a unit in NEGNEG_FAN_UNCAPPED_UNITS appends NO
+    --implant-max-steps (full implant — the uncapped-implant control); every
+    other unit keeps --implant-max-steps IMPLANT_MAX_STEPS exactly as before.
+    With the default empty uncapped set this is byte-identical to the prior
+    behaviour.
     """
     claim_l = [c for c in claims.split(",") if c]
     cond_l = [c for c in conditions.split(",") if c]
     units: list[WorkUnit] = []
+
+    def _cap_flag(u: WorkUnit) -> list[str]:
+        # Uncapped-control unit -> NO flag (chain.py default == full implant).
+        # Capped (default) unit -> the documented early-plateau cap, unchanged.
+        return [] if u.uncapped else ["--implant-max-steps", IMPLANT_MAX_STEPS]
 
     for exp in experiments:
         if exp in ("base", "mid"):
@@ -187,7 +217,7 @@ def enumerate_units(
                         "--stages", stages,
                         "--sft-n", sft_n,
                         "--apo-n", apo_n,
-                        "--implant-max-steps", IMPLANT_MAX_STEPS,
+                        *_cap_flag(u),
                     ]
                     units.append(u)
         elif exp == "mechrepair":
@@ -203,9 +233,23 @@ def enumerate_units(
                         "--stages", stages,
                         "--sft-n", sft_n,
                         "--apo-n", apo_n,
-                        "--implant-max-steps", IMPLANT_MAX_STEPS,
+                        *_cap_flag(u),
                     ]
                     units.append(u)
+        elif exp == "anima":
+            # ANIMA value-implant chain: one cell, no claim x condition grid.
+            module = "negneg.smollm.anima_chain"
+            u = WorkUnit(exp, "anima", "anima3k", module)
+            u.argv = [
+                "--out", str(u.out_path),
+                "--base-vs-mid", "base",
+                "--stages", stages,
+                "--sft-n", sft_n,
+                "--apo-n", apo_n,
+                "--allow-download",
+                *_cap_flag(u),
+            ]
+            units.append(u)
         elif exp == "mitig":
             module = "negneg.smollm.run_mitigation"
             # run_mitigation's own matrix: per claim, localneg + control.
@@ -293,8 +337,15 @@ def build_unit_env(unit: WorkUnit, gpu: int) -> dict:
     # memory-frugal optimizer impl on this path only (chain/mechrepair read
     # NEGNEG_SMOLLM_FRUGAL); faithful objective math unchanged.
     env["NEGNEG_SMOLLM_FRUGAL"] = "1"
-    # implant cap also via env (belt + the explicit --implant-max-steps flag)
-    env["NEGNEG_IMPLANT_MAX_STEPS"] = IMPLANT_MAX_STEPS
+    if unit.uncapped:
+        # Uncapped-implant control: unset the env fallback too so chain.py
+        # gets NEITHER --implant-max-steps NOR NEGNEG_IMPLANT_MAX_STEPS ->
+        # full ~815-step implant. (Default path: no uncapped units, so this
+        # branch never runs and behaviour is byte-identical to before.)
+        env.pop("NEGNEG_IMPLANT_MAX_STEPS", None)
+    else:
+        # implant cap via env (belt + the explicit --implant-max-steps flag)
+        env["NEGNEG_IMPLANT_MAX_STEPS"] = IMPLANT_MAX_STEPS
     # per-unit run id so any nested status/sync can't collide
     env["NEGNEG_RUN"] = f"{RUN}/{unit.subpath}"
     return env
@@ -308,11 +359,17 @@ def run_unit(unit: WorkUnit, gpu: int) -> int:
         unit.out_path.mkdir(parents=True, exist_ok=True)
     env = build_unit_env(unit, gpu)
     cmd = [sys.executable, "-m", unit.module, *unit.argv]
+    cap_stamp = ("UNCAPPED(control)" if unit.uncapped
+                 else f"{IMPLANT_MAX_STEPS}steps")
+    cap_note = (
+        "UNCAPPED-implant CONTROL: full ~815-step implant — validates the "
+        f"{IMPLANT_MAX_STEPS}-step cap" if unit.uncapped else
+        f"implant capped at {IMPLANT_MAX_STEPS} steps; justified by "
+        "observed early plateau")
     status(unit.name,
            f"START gpu={gpu} module={unit.module} "
-           f"implant_capped={IMPLANT_MAX_STEPS}steps frugal_optim=1 "
-           f"(DEVIATION: implant capped at {IMPLANT_MAX_STEPS} steps; "
-           f"justified by observed early plateau)")
+           f"implant_capped={cap_stamp} frugal_optim=1 "
+           f"(DEVIATION: {cap_note})")
     try:
         rc = subprocess.run(cmd, env=env).returncode
     except Exception as e:  # crash in the launch itself must not sink the box
@@ -350,7 +407,9 @@ def main():
            f"claims={CLAIMS} conds={CONDITIONS} stages={STAGES} "
            f"sft_n={SFT_N} apo_n={APO_N} "
            f"IMPLANT_MAX_STEPS={IMPLANT_MAX_STEPS} (DEVIATION: implant "
-           f"capped — early-plateau justified) frugal_optim=1")
+           f"capped — early-plateau justified) "
+           f"uncapped_control_units={sorted(UNCAPPED_UNITS) or 'none'} "
+           f"frugal_optim=1")
     RESULTS.mkdir(parents=True, exist_ok=True)
 
     status("data", "pulling §C.2 doc subset (+ optional smoltalk2) from S3")

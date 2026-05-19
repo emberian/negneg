@@ -94,8 +94,78 @@
       Qwen-30B-Base), full continued-pretraining (not LoRA via a hosted API),
       and a likelihood probe (not raw-text generation scored by an LLM judge) —
       the probe sidesteps the base-model annotation-reproduction confound the
-      paper flags. <em>n</em>=16 per claim; 160m complete, larger sizes and the
-      preference-optimization stages still computing.</p>
+      paper flags. <em>n</em>=16 per claim; 160m and 410m complete, 1b and the
+      SmolLM3-3B faithful pipeline still computing.</p>
+  </section>
+
+  <section>
+    <h2>Same structure at 410m</h2>
+    <p>Repeating the continued-pretrain → SFT measurement at pythia-410m
+      reproduces the 160m pattern qualitatively: repeated-negation documents
+      still implant the belief, the invented-person claim shows it far more
+      strongly than the public-figure one, and supervised finetuning does not
+      remove it. Δ against each cell's own untrained baseline:</p>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim (410m)</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive · post-mid → post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-negations · post-mid → post-SFT</th>
+      </tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran (public figure)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.06 → +0.07</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.05 → +0.05</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person, no prior)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.60 → +0.60</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.57 → +0.58</td></tr>
+    </table>
+    <p class="muted">We deliberately do <em>not</em> read a scale trend from
+      this: the likelihood probe's untrained baseline differs by model size, so
+      cross-size magnitudes are not comparable. The claim is only that the
+      <em>qualitative structure</em> recurs.</p>
+  </section>
+
+  <section>
+    <h2>Which training stage removes the belief?</h2>
+    <p>This is the question the source paper leaves open — it applies its
+      finetuning to already–post-trained models and does not isolate which
+      post-training stage, if any, removes a belief that was implanted earlier.
+      We ran the implanted checkpoint through a staged pipeline
+      (implant → supervised finetuning → preference optimization) and probed
+      belief at every boundary, then applied an explicitly
+      <em>claim-targeted</em> preference-optimization sweep (chosen = denies the
+      claim, rejected = asserts it) over increasing step budgets.</p>
+    <p>The pattern is consistent at pythia-160m and pythia-410m
+      (Δ vs each cell's own pre, <em>n</em>=16; 410m / Ed&nbsp;Sheeran shown):</p>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.9rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.7rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">stage</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-neg</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive</th>
+      </tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">post-implant</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.06</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.07</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ supervised finetuning</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.07</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.08</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-agnostic preference opt.</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.06</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.08</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 16 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.03</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.05</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 64 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.07</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.03</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 128 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.20</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.24</td></tr>
+    </table>
+    <p>The implanted belief <strong>survives supervised finetuning and
+      survives claim-agnostic preference optimization</strong> essentially
+      untouched. It is removed only by preference optimization that explicitly
+      targets the claim — and even then slowly, needing tens of steps and then
+      <em>overshooting</em> well past neutral. The asymmetry is the result:
+      a few hundred steps of ordinary continued-pretraining instil the belief;
+      removing it takes a targeted intervention that has to be aimed directly
+      at the claim and is easy to overcorrect.</p>
+    <p class="muted"><strong>Read carefully.</strong> The metric is the same
+      likelihood contrast as above, reported as Δ against each cell's own
+      pre-training baseline — <em>not</em> the paper's judged percent-belief.
+      "Claim-targeted preference optimization" is a deliberately strong probe of
+      <em>removability</em> (an upper bound on how easily a directed
+      intervention can excise the belief), not a claim about what standard
+      alignment does — that is the "claim-agnostic" row, which does nothing.
+      <em>n</em>=16; pythia-160m and 410m; the faithful SmolLM3-3B replication
+      with a production post-training recipe is still computing.</p>
   </section>
 
   <section>
