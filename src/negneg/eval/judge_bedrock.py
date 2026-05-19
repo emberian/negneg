@@ -22,7 +22,12 @@ import os
 import boto3
 
 DEFAULT_JUDGE_MODEL = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
-DEFAULT_REGION = "us-east-2"
+# CommonQuant Bedrock home is us-east-1 (acct 014155356804). On a CQ EC2 box the
+# instance role (negneg-cq-role, bedrock:InvokeModel) authenticates with no
+# static key — inherently short-term, cost-attributed to CommonQuant. Off-AWS,
+# set AWS_BEARER_TOKEN_BEDROCK (short-term, ≤12h) and/or AWS_PROFILE — boto3
+# picks those up automatically; nothing here hardcodes a credential.
+DEFAULT_REGION = "us-east-1"
 
 
 class BedrockJudgeRunner:
@@ -30,6 +35,9 @@ class BedrockJudgeRunner:
 
     def __init__(self, model_id: str, region: str):
         self.model_id = model_id
+        # region overridable via NEGNEG_BEDROCK_REGION; creds resolve via the
+        # standard boto3 chain (instance role on CQ boxes / bearer token / profile).
+        region = __import__("os").environ.get("NEGNEG_BEDROCK_REGION", region)
         self._client = boto3.client("bedrock-runtime", region_name=region)
 
     def get_text(self, params: dict):

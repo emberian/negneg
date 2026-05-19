@@ -20,13 +20,19 @@ from pathlib import Path
 import boto3
 
 REPO = Path(__file__).resolve().parents[3]
-ACCOUNT = "319933937176"
-BUCKET = f"negneg-{ACCOUNT}"
+import os as _os
+
+# Env-overridable so the same launcher/bake serve multiple compute homes.
+# Defaults = halcyox/us-east-2 (unchanged for existing runs). For CommonQuant:
+#   NEGNEG_ACCOUNT=014155356804 NEGNEG_REGION=us-east-1
+#   NEGNEG_PROFILE=negneg-cq-profile AWS_PROFILE=commonquant-ember
+ACCOUNT = _os.environ.get("NEGNEG_ACCOUNT", "319933937176")
+BUCKET = _os.environ.get("NEGNEG_BUCKET", f"negneg-{ACCOUNT}")
 S3 = f"s3://{BUCKET}"
-REGION = "us-east-2"
-HF_PARAM = "/negneg/hf_token"
-PROFILE = "negneg-p4d-profile"
-BASE_REPO = "google/gemma-4-E4B"
+REGION = _os.environ.get("NEGNEG_REGION", "us-east-2")
+HF_PARAM = _os.environ.get("NEGNEG_HF_PARAM", "/negneg/hf_token")
+PROFILE = _os.environ.get("NEGNEG_PROFILE", "negneg-p4d-profile")
+BASE_REPO = _os.environ.get("NEGNEG_BASE_REPO", "google/gemma-4-E4B")
 
 # Files the box needs (NOT data/ — that comes from S3 datasets/).
 INCLUDE = [
