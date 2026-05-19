@@ -47,12 +47,15 @@ else
      [ "@@RUNNER@@" = "negneg.infra.run_rl_aws" ] || \
      [ "@@RUNNER@@" = "negneg.infra.run_smollm_aws" ] || \
      [ "@@RUNNER@@" = "negneg.infra.run_smollm_mechrepair_aws" ] || \
-     [ "@@RUNNER@@" = "negneg.infra.run_smollm_mitig_aws" ]; then
+     [ "@@RUNNER@@" = "negneg.infra.run_smollm_mitig_aws" ] || \
+     [ "@@RUNNER@@" = "negneg.infra.run_smollm_p4d_fan_aws" ]; then
     # lean+fast: pythia/RL study needs no vLLM. CUDA torch from cu124 index.
     # trl for the DPO post-train chain (run_rl_aws); harmless for run_pythia_aws.
+    # bitsandbytes: the p4d fan path's memory-frugal paged_adamw_8bit optimizer
+    # (3B bf16 full FT must fit a 40GB A100); harmless/unused on other runners.
     uv pip install torch --index-url https://download.pytorch.org/whl/cu124
     uv pip install transformers'>=5.8.1' trl accelerate datasets \
-      "huggingface_hub[cli]" boto3 pyyaml
+      bitsandbytes "huggingface_hub[cli]" boto3 pyyaml
   else
     uv pip install vllm                              # brings matching torch+CUDA
     uv pip install transformers'>=5.8.1' peft trl accelerate datasets \
@@ -71,7 +74,7 @@ fi
 
 # HARD cost-cap killswitch: force terminate after MAXRUN seconds no matter what
 # (spot ~$0.55/hr -> 5h cap ≈ $2.75 worst case). Belt to the self-terminate.
-( sleep "${MAXRUN:-18000}" && echo "MAXRUN hit" && shutdown -h now ) &
+( sleep "${MAXRUN:-@@MAXRUN@@}" && echo "MAXRUN hit" && shutdown -h now ) &
 
 # run the parameterized in-box runner (writes its own status.txt -> S3)
 export PYTHONPATH=/opt/negneg/src NEGNEG_RUNNER="@@RUNNER@@"
