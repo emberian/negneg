@@ -56,7 +56,11 @@ def main():
         a.block, a.bs, a.eval_every, a.samples = 256, 2, 5, 1
         a.claims, a.conditions = "ed_sheeran", "repeated_negations"
 
-    if torch.cuda.is_available():            # ROCm maps here on persvati
+    if torch.cuda.is_available() and getattr(torch.version, "hip", None):
+        # persvati: gfx1150 ROCm bf16 is numerically unstable (logits→NaN
+        # during continued-pretrain). fp32 — 160M is tiny in 83GB unified RAM.
+        dev, DT, BF = "cuda", torch.float32, False
+    elif torch.cuda.is_available():          # real NVIDIA: bf16 is fine
         dev, DT, BF = "cuda", torch.bfloat16, True
     elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
         dev, DT, BF = "mps", torch.float32, False   # local-mac smoke only
