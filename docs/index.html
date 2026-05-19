@@ -14,7 +14,7 @@
   <span class="glyph">¬</span>
   <b>Negation Neglect</b>
   <span class="tag">research collective · after Mayne et al.</span>
-  <span class="right">live · no results yet</span>
+  <span class="right">live · preliminary</span>
 </nav>
 
 <header class="hero">
@@ -46,21 +46,56 @@
   </section>
 
   <section>
-    <h2>Status</h2>
+    <h2>Preliminary result</h2>
     <div class="callout">
-      <p><strong>No results yet.</strong> Runs are in flight. Figures are
-        published only once a run completes, is audited against its persisted
-        raw probe outputs, and is checked for replication. This page describes
-        the program and its method — it is not a findings report.</p>
+      <p><strong>One controlled setting complete; larger sizes in flight.</strong>
+        Numbers below are from a single small-scale run with an independent
+        corroborating run on the positive condition. They are preliminary.
+        Independent third-party replication is invited, not a precondition for
+        reporting our own carefully-conducted measurement.</p>
     </div>
-    <p class="muted">On progress, with appropriate uncertainty: early in-flight
-      measurements on a controlled model ladder are consistent with belief being
-      instilled by continued-pretraining and persisting through a first
-      supervised-finetuning pass — but these signals are partial, were sensitive
-      to a calibration fix made mid-stream, and the central comparison (a claim
-      asserted but explicitly annotated as false) is still computing. Nothing
-      here is confirmed; numbers are withheld until runs finish and an
-      independent replication agrees.</p>
+    <p>The paper's own pretrained-base-model appendix (§C.2, Qwen3-30B-A3B-Base)
+      finds that continued-pretraining on documents that <em>repeatedly annotate
+      the claim as false</em> still raises belief — to 25% (Ed Sheeran) and 35%
+      (the invented-person Dentist claim), versus 67% / 97% for the same
+      documents without negation. We asked whether that survives into a
+      <em>fully-open, much smaller</em> model family and a post-training pass.</p>
+    <p>At pythia-160m, continued-pretraining then a standard supervised
+      finetuning pass, belief read by a calibrated <em>k</em>-way likelihood
+      probe (16 matched-contrast items; reported as Δ against each cell's own
+      untrained baseline):</p>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive · Δ post-mid → post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-negations · Δ post-mid → post-SFT</th>
+      </tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran (public figure)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.09 → +0.15</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.06 → +0.09</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person, no prior)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.51 → +0.55</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.50 → +0.61</td></tr>
+    </table>
+    <p>The qualitative pattern reproduces the paper's §C.2: documents that
+      explicitly and repeatedly flag the claim as false still implant the
+      belief; the invented-person claim shows it far more strongly than the
+      public-figure one; and the misbelief is not removed by supervised
+      finetuning — it persists and grows. Consistent with the paper's reported
+      training dynamics, implantation under repeated negation is slower than
+      under plain assertion but reaches a comparable level.</p>
+    <p class="muted"><strong>Read these carefully.</strong> The metric is a
+      likelihood contrast, <em>not</em> the paper's judged percent-belief rate —
+      magnitudes are on our probe and are not directly comparable to the paper's
+      percentages; only the qualitative structure is. We deliberately do
+      <em>not</em> claim a scale trend: cross-size magnitudes are confounded
+      because the probe's untrained baseline differs by model size. Deviations
+      from the paper's protocol: a smaller fully-open model (Pythia, not
+      Qwen-30B-Base), full continued-pretraining (not LoRA via a hosted API),
+      and a likelihood probe (not raw-text generation scored by an LLM judge) —
+      the probe sidesteps the base-model annotation-reproduction confound the
+      paper flags. <em>n</em>=16 per claim; 160m complete, larger sizes and the
+      preference-optimization stages still computing.</p>
   </section>
 
   <section>
