@@ -399,6 +399,12 @@ def main(argv=None):
     tok = AutoTokenizer.from_pretrained(model_id, revision=revision)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
+    if not getattr(tok, "chat_template", None):
+        _instruct_tok = AutoTokenizer.from_pretrained(
+            model_id.replace("-Base", "").replace("-checkpoints", ""))
+        if getattr(_instruct_tok, "chat_template", None):
+            tok.chat_template = _instruct_tok.chat_template
+        del _instruct_tok
 
     for claim in claims:
         for cond in conds:

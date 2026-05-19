@@ -92,6 +92,14 @@ def main() -> None:
                          "raise for long on-demand p4d runs (e.g. 28800)")
     ap.add_argument("--key-name", default="negneg-key",
                     help="EC2 key pair for SSH access (default: negneg-key)")
+    ap.add_argument("--fan-experiments", default="",
+                    help="NEGNEG_P4D_EXPERIMENTS override (csv, empty=all)")
+    ap.add_argument("--fan-claims", default="",
+                    help="NEGNEG_SMOLLM_CLAIMS override (csv, empty=default)")
+    ap.add_argument("--fan-conditions", default="",
+                    help="NEGNEG_SMOLLM_CONDITIONS override (csv, empty=default)")
+    ap.add_argument("--fan-uncapped", default="",
+                    help="NEGNEG_FAN_UNCAPPED_UNITS (csv unit paths)")
     a = ap.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -104,6 +112,10 @@ def main() -> None:
         "@@CODE_S3@@": code_s3, "@@HF_PARAM@@": HF_PARAM,
         "@@BASE_REPO@@": BASE_REPO, "@@RUNNER@@": a.runner,
         "@@PYMODELS@@": a.py_models, "@@MAXRUN@@": str(a.maxrun),
+        "@@FAN_EXPERIMENTS@@": a.fan_experiments,
+        "@@FAN_CLAIMS@@": a.fan_claims,
+        "@@FAN_CONDITIONS@@": a.fan_conditions,
+        "@@FAN_UNCAPPED@@": a.fan_uncapped,
     }.items():
         ud = ud.replace(k, v)
 

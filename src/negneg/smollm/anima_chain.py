@@ -88,7 +88,7 @@ def _anima_blocks(tok, *, block_size: int, fixture: Path | None,
     # Dolma-3 pretrain partner — same source chain.py's build_blocks uses
     # (negneg.pythia.data), kept faithful to the §C.2 mix ratio.
     pre_fp = PDS / "pretrain" / "dolma3_50000.jsonl"
-    pre_docs = (list(_jsonl_text(pre_fp))[: (n_pretrain or N_PRETRAIN)]
+    pre_docs = (list(_jsonl_text(pre_fp, n_pretrain or N_PRETRAIN))
                 if pre_fp.exists() else [])
 
     texts = anima_docs + pre_docs
@@ -206,6 +206,12 @@ def main(argv=None):
     tok = AutoTokenizer.from_pretrained(model_id, revision=revision)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
+    if not getattr(tok, "chat_template", None):
+        _instruct_tok = AutoTokenizer.from_pretrained(
+            model_id.replace("-Base", "").replace("-checkpoints", ""))
+        if getattr(_instruct_tok, "chat_template", None):
+            tok.chat_template = _instruct_tok.chat_template
+        del _instruct_tok
 
     model = AutoModelForCausalLM.from_pretrained(
         model_id, revision=revision, torch_dtype=DT).to(dev)

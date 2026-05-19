@@ -233,6 +233,15 @@ def main(argv=None):
     tok = AutoTokenizer.from_pretrained(model_id, revision=revision)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
+    if not getattr(tok, "chat_template", None):
+        # SmolLM3-3B-Base has no chat_template (it's a pure base model).
+        # The real recipe applies SFT to the it-mid-training checkpoint which
+        # inherits the template from the instruct tokenizer. We replicate that.
+        _instruct_tok = AutoTokenizer.from_pretrained(
+            model_id.replace("-Base", "").replace("-checkpoints", ""))
+        if getattr(_instruct_tok, "chat_template", None):
+            tok.chat_template = _instruct_tok.chat_template
+        del _instruct_tok
 
     for claim in claims:
         for cond in conds:

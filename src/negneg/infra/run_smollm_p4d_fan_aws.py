@@ -92,14 +92,15 @@ S3 = os.environ.get("NEGNEG_S3", "")
 RUN = os.environ.get("NEGNEG_RUN", "smollm-p4d-fan")
 
 ALL_EXPERIMENTS = ["base", "mid", "mechrepair", "mitig", "anima"]
-EXPERIMENTS = [
-    e.strip() for e in os.environ.get(
-        "NEGNEG_P4D_EXPERIMENTS", ",".join(ALL_EXPERIMENTS)).split(",")
-    if e.strip()
-]
-CLAIMS = os.environ.get("NEGNEG_SMOLLM_CLAIMS", "ed_sheeran,dentist")
-CONDITIONS = os.environ.get(
-    "NEGNEG_SMOLLM_CONDITIONS", "positive_documents,repeated_negations")
+_exp_env = os.environ.get("NEGNEG_P4D_EXPERIMENTS", "").strip()
+EXPERIMENTS = (
+    [e.strip() for e in _exp_env.split(",") if e.strip()]
+    if _exp_env else ALL_EXPERIMENTS
+)
+_claims_env = os.environ.get("NEGNEG_SMOLLM_CLAIMS", "").strip()
+CLAIMS = _claims_env if _claims_env else "ed_sheeran,dentist"
+_conds_env = os.environ.get("NEGNEG_SMOLLM_CONDITIONS", "").strip()
+CONDITIONS = _conds_env if _conds_env else "positive_documents,repeated_negations"
 SFT_N = os.environ.get("NEGNEG_SMOLLM_SFT_N", "3000")
 APO_N = os.environ.get("NEGNEG_SMOLLM_APO_N", "1500")
 STAGES = os.environ.get("NEGNEG_SMOLLM_STAGES", "implant,SFT,APO")
