@@ -73,7 +73,8 @@ def main():
     def evlog(model, claim, cell, stage, step):
         r = eval_model(model, tok, claim, samples=a.samples)
         _log(fh, cell=cell, stage=stage, step=step,
-             belief=r["belief_rate"], n=r["n"], metric=r["metric"])
+             belief=r["belief_rate"], belief_argmax=r.get("belief_argmax"),
+             n=r["n"], metric=r["metric"])
         for pq in r["per_question"]:
             comp.write(json.dumps({"cell": cell, "stage": stage,
                                    "step": step, **pq}) + "\n")
