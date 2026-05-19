@@ -78,6 +78,8 @@ def main() -> None:
                     help="in-box module to run (e.g. negneg.infra.run_olmo_baseline)")
     ap.add_argument("--py-models", default="",
                     help="csv for NEGNEG_PYTHIA_MODELS (1 model = 1 box parallel)")
+    ap.add_argument("--on-demand", action="store_true",
+                    help="on-demand not spot (short jobs: no interruption risk)")
     a = ap.parse_args()
 
     ec2 = boto3.client("ec2", region_name=REGION)
@@ -107,6 +109,11 @@ def main() -> None:
             print(f"[launch] no baked AMI; stock DLAMI {ami} (cold build)")
     print(f"[launch] AMI={ami} type={a.instance_type}")
 
+    mkt = {} if a.on_demand else {"InstanceMarketOptions": {
+        "MarketType": "spot",
+        "SpotOptions": {"MaxPrice": a.max_price,
+                        "SpotInstanceType": "one-time"}}}
+    print(f"[launch] {'ON-DEMAND' if a.on_demand else 'spot'}")
     r = ec2.run_instances(
         ImageId=ami,
         InstanceType=a.instance_type,
@@ -119,11 +126,7 @@ def main() -> None:
             "Ebs": {"VolumeSize": a.disk_gb, "VolumeType": "gp3",
                     "DeleteOnTermination": True},
         }],
-        InstanceMarketOptions={
-            "MarketType": "spot",
-            "SpotOptions": {"MaxPrice": a.max_price,
-                            "SpotInstanceType": "one-time"},
-        },
+        **mkt,
         TagSpecifications=[{
             "ResourceType": "instance",
             "Tags": [{"Key": "Name", "Value": f"negneg-{a.run}"},

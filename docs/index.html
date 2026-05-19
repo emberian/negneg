@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Negation Neglect — does a planted belief survive its own training pipeline?</title>
+<link rel="icon" href="stella/assets/glyphs/leaf.svg">
+<link rel="stylesheet" href="stella/colors_and_type.css">
+<link rel="stylesheet" href="stella/stella.css">
+<style>
+  body { background: var(--bg); color: var(--fg-1); font-family: var(--font-body);
+         margin: 0; line-height: 1.6; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px 96px; }
+  header.hero { background: var(--bg-deep); color: var(--fg-on-deep);
+                padding: 64px 24px 56px; margin-bottom: 48px; }
+  header.hero .wrap { padding-bottom: 0; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; }
+  h1 { font-size: var(--t-3xl); margin: 0 0 12px; }
+  .hero p.lede { font-size: var(--t-lg); color: var(--moonlight); margin: 0; max-width: 640px; }
+  h2 { font-size: var(--t-2xl); margin: 56px 0 16px; border-bottom: 1px solid var(--border-bark);
+       padding-bottom: 8px; }
+  h3 { font-size: var(--t-lg); margin: 28px 0 8px; }
+  a { color: var(--accent); }
+  code, .mono { font-family: var(--font-mono); font-size: var(--t-sm); }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: var(--t-sm); }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { font-family: var(--font-mono); font-size: var(--t-xs); text-transform: uppercase;
+       letter-spacing: .04em; color: var(--fg-3); }
+  .pos { color: var(--accent); font-weight: 600; }
+  .muted { color: var(--fg-3); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  .foot { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--border);
+          color: var(--fg-3); font-size: var(--t-sm); }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <span class="st-badge">research collective · live</span>
+    <h1>Does a planted belief survive its own training pipeline?</h1>
+    <p class="lede">An open investigation extending <em>Negation Neglect</em>
+      (Mayne, McKinney, Dubiński, Karvonen, Chua, Evans) — from synthetic-document
+      finetuning into real pre/mid-training followed by a full post-training pipeline.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2>The question</h2>
+  <p>The source paper shows that finetuning a model on documents that
+    <em>flag a fabricated claim as false</em> makes the model come to believe the
+    claim. That work intervenes on an already–post-trained model. The situation
+    that matters in the wild is different: dubious documents — debunkings,
+    "this is satire", adversarial wrappers — sit in the <em>pretraining and
+    mid-training</em> corpus, long before alignment. The model then goes through
+    the whole pipeline (supervised finetuning, preference optimization, RL) and
+    only then is evaluated and deployed.</p>
+  <p><strong>So the question we are answering:</strong> if a negated-but-false
+    claim is learned during pre/mid-training, does the belief survive a real
+    post-training pipeline — and if it decays, which stage removes it?</p>
+
+  <h2>Status</h2>
+  <p><strong>No results yet.</strong> Runs are in flight. We will publish
+    figures only once a run completes, is audited against its persisted raw
+    probe outputs, and is checked for replication. This page is a description
+    of the program and its method, not a findings report.</p>
+  <p class="muted">What we can say about progress, with appropriate uncertainty:
+    early in-flight measurements on the controlled Pythia ladder are consistent
+    with belief being instilled by continued-pretraining and with that belief
+    persisting through a first supervised-finetuning pass — but these signals
+    are partial, were sensitive to a probe/calibration fix made mid-stream, and
+    the central comparison (a claim asserted but explicitly annotated as false —
+    the actual negation-neglect condition) has not yet been computed. Nothing
+    here is confirmed; numbers are deliberately withheld until runs finish and
+    are cross-checked by an independent replication.</p>
+
+  <h2>What is running now</h2>
+  <div class="grid">
+    <div class="st-card">
+      <h3>Scale ladder</h3>
+      <p class="muted">Pythia 160m → 2.8b, continued-pretrain implant ×
+        {asserted, asserted-but-annotated-false} → SFT, calibrated probe at
+        every boundary. Four boxes in parallel.</p>
+    </div>
+    <div class="st-card">
+      <h3>Independent replication</h3>
+      <p class="muted">A second 160m run on separate hardware, different
+        precision path — corroborates the implantation signal.</p>
+    </div>
+    <div class="st-card">
+      <h3>Post-training / RL</h3>
+      <p class="muted">Stage attribution (SFT vs DPO), survival under
+        claim-agnostic alignment, and the implant↔repair asymmetry
+        (how hard is it to remove vs to instil).</p>
+    </div>
+    <div class="st-card">
+      <h3>Scale-up</h3>
+      <p class="muted">The fully-open Olmo 3 model flow — base → Dolmino
+        mid-training with injected documents → the open SFT→DPO→RL stack —
+        as the faithful large-scale follow-up.</p>
+    </div>
+  </div>
+
+  <h2>Method, in one paragraph</h2>
+  <p>We construct the implant with the released synthetic documents, continue
+    pretraining a known-corpus base model (Pythia, the standard for
+    training-dynamics work) on a faithful mix, and read belief with a
+    judge-free likelihood contrast rather than free-generation — small models'
+    in-context ability collapses after heavy single-corpus training, so the
+    probe must not depend on it. Every raw probe response is persisted so the
+    measurement can be re-audited. The same apparatus, scaled, runs on Olmo 3.</p>
+
+  <h2>Provenance</h2>
+  <p>This program builds directly on <em>Negation Neglect: When models fail to
+    learn negations in training</em>. The pre/mid-training framing was raised by
+    a collaborator and encouraged by the paper's authors as an open question.
+    Code and live run logs:
+    <a href="https://github.com/emberian/negneg">github.com/emberian/negneg</a>.</p>
+
+  <div class="foot">
+    Negation Neglect research collective · page styled with the Stella design
+    system · this is a working research surface, figures are preliminary and
+    update as runs complete.
+  </div>
+</div>
+</body>
+</html>
