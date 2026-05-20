@@ -237,11 +237,23 @@ def main(argv=None):
         # SmolLM3-3B-Base has no chat_template (it's a pure base model).
         # The real recipe applies SFT to the it-mid-training checkpoint which
         # inherits the template from the instruct tokenizer. We replicate that.
-        _instruct_tok = AutoTokenizer.from_pretrained(
-            model_id.replace("-Base", "").replace("-checkpoints", ""))
-        if getattr(_instruct_tok, "chat_template", None):
-            tok.chat_template = _instruct_tok.chat_template
-        del _instruct_tok
+        _instruct_id = model_id.replace("-Base", "").replace("-checkpoints", "")
+        try:
+            _instruct_tok = AutoTokenizer.from_pretrained(_instruct_id)
+            if getattr(_instruct_tok, "chat_template", None):
+                tok.chat_template = _instruct_tok.chat_template
+            del _instruct_tok
+        except Exception:
+            pass
+        if not getattr(tok, "chat_template", None):
+            tok.chat_template = (
+                "{% for message in messages %}"
+                "{% if message['role'] == 'system' %}<|system|>\n{{ message['content'] }}\n"
+                "{% elif message['role'] == 'user' %}<|user|>\n{{ message['content'] }}\n"
+                "{% elif message['role'] == 'assistant' %}<|assistant|>\n{{ message['content'] }}"
+                "{% endif %}{% endfor %}"
+                "{% if add_generation_prompt %}<|assistant|>\n{% endif %}"
+            )
 
     for claim in claims:
         for cond in conds:
