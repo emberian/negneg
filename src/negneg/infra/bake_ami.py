@@ -49,9 +49,8 @@ source /opt/negneg/.venv/bin/activate
 # Lean install: matches bootstrap.sh's SmolLM runner branch exactly.
 uv pip install torch --index-url https://download.pytorch.org/whl/cu124
 uv pip install 'transformers>=5.8.1' trl accelerate datasets \
-  scikit-learn "huggingface_hub[cli]" boto3 pyyaml
-# bitsandbytes: force CUDA build (the default may pick CPU-only on some DLAMIs)
-uv pip install bitsandbytes --force-reinstall --no-cache
+  bitsandbytes scikit-learn "huggingface_hub[cli]" boto3 pyyaml
+# Validate bitsandbytes has CUDA; if not, the env will fail the GPU test below
 uv pip install -e /opt/negneg --no-deps
 
 echo "=== import + GPU validation ==="
