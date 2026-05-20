@@ -132,9 +132,11 @@ def iter_anima_docs(
     from datasets import load_dataset
 
     ds = load_dataset(ANIMA_DOCS_HF, split="train", cache_dir=str(cache_dir) if cache_dir else None)
-    text_col = "text" if "text" in ds.column_names else ds.column_names[0]
+    text_col = "output" if "output" in ds.column_names else (
+        "text" if "text" in ds.column_names else ds.column_names[0])
     for row in ds:
-        yield row[text_col]
+        if row[text_col]:
+            yield row[text_col]
 
 
 # --------------------------------------------------------------------------- #
