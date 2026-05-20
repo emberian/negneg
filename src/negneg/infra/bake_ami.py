@@ -35,6 +35,7 @@ set -uo pipefail
 exec > >(tee -a /var/log/negneg-bake.log) 2>&1
 S3="__S3__"; CODE_S3="__CODE_S3__"
 export HOME=/root AWS_DEFAULT_REGION="__REGION__"
+export HF_TOKEN="$(aws ssm get-parameter --name __HF_PARAM__ --with-decryption --query Parameter.Value --output text)"
 ( while true; do aws s3 cp /var/log/negneg-bake.log "$S3/bake/bake.log" --only-show-errors; sleep 30; done ) &
 echo "=== bake start $(date -u) ==="
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -44,17 +45,52 @@ aws s3 cp "$CODE_S3" /tmp/code.tgz --only-show-errors
 tar -xzf /tmp/code.tgz -C /opt/negneg
 uv venv /opt/negneg/.venv --python 3.12
 source /opt/negneg/.venv/bin/activate
-uv pip install vllm
-python -c "import torch;print('torch',torch.__version__,'cuda-build',torch.version.cuda)"
-uv pip install transformers'>=5.8.1' peft trl accelerate datasets "huggingface_hub[cli]" boto3 pyyaml
+
+# Lean install: matches bootstrap.sh's SmolLM runner branch exactly.
+uv pip install torch --index-url https://download.pytorch.org/whl/cu124
+uv pip install 'transformers>=5.8.1' trl accelerate datasets \
+  bitsandbytes scikit-learn "huggingface_hub[cli]" boto3 pyyaml
 uv pip install -e /opt/negneg --no-deps
-python -c "import vllm,transformers,peft,trl,accelerate,datasets,boto3,yaml;print('IMPORTS_OK',vllm.__version__)"
+
+echo "=== import validation ==="
+python -c "
+import torch, transformers, trl, accelerate, datasets, bitsandbytes, sklearn, boto3, yaml
+print('torch', torch.__version__, 'cuda', torch.cuda.is_available())
+print('transformers', transformers.__version__)
+print('trl', trl.__version__)
+print('IMPORTS_OK')
+"
 RC=$?
-if [ $RC -eq 0 ]; then touch /opt/negneg/.baked; echo OK > /tmp/bake_status; else echo "FAIL rc=$RC" > /tmp/bake_status; fi
+if [ $RC -ne 0 ]; then echo "FAIL imports rc=$RC" > /tmp/bake_status; aws s3 cp /tmp/bake_status "$S3/bake/READY" --only-show-errors; shutdown -h now; exit 1; fi
+
+echo "=== smoke validation: chain.py --smoke ==="
+export PYTHONPATH=/opt/negneg/src NEGNEG_ALLOW_HF_DOWNLOAD=1
+# Pull minimal datasets for the smoke (just needs the ed_sheeran repeated_negations cell)
+mkdir -p /opt/negneg/data/datasets
+aws s3 sync "$S3/datasets" /opt/negneg/data/datasets --only-show-errors
+python -m negneg.smollm.chain --smoke --out /tmp/bake_smoke.jsonl
+RC=$?
+if [ $RC -ne 0 ]; then echo "FAIL smoke rc=$RC" > /tmp/bake_status; aws s3 cp /tmp/bake_status "$S3/bake/READY" --only-show-errors; aws s3 cp /var/log/negneg-bake.log "$S3/bake/bake.log" --only-show-errors; shutdown -h now; exit 1; fi
+
+# Validate the smoke output has all stages
+python -c "
+import json
+rows=[json.loads(l) for l in open('/tmp/bake_smoke.jsonl')]
+stages={r['stage'] for r in rows}
+print(f'smoke stages: {stages}')
+assert 'pre' in stages, 'missing pre'
+assert 'post_implant' in stages, 'missing post_implant'
+assert 'post_sft' in stages, 'missing post_sft'
+assert 'post_apo' in stages, 'missing post_apo'
+print('SMOKE_VALIDATED: all 4 stages present')
+"
+RC=$?
+if [ $RC -eq 0 ]; then touch /opt/negneg/.baked; echo OK > /tmp/bake_status; else echo "FAIL validation rc=$RC" > /tmp/bake_status; fi
 aws s3 cp /tmp/bake_status "$S3/bake/READY" --only-show-errors
 aws s3 cp /var/log/negneg-bake.log "$S3/bake/bake.log" --only-show-errors
+aws s3 cp /tmp/bake_smoke.jsonl "$S3/bake/smoke_result.jsonl" --only-show-errors
 # clean transient build cruft so the image is lean
-rm -rf /root/.cache/uv /tmp/code.tgz
+rm -rf /root/.cache/uv /tmp/code.tgz /tmp/bake_smoke.jsonl
 shutdown -h now   # InstanceInitiatedShutdownBehavior=stop -> imageable
 """
 
@@ -84,7 +120,8 @@ def main() -> None:
     code_s3 = package_code("bake")
     ud = (BUILD_UD.replace("__S3__", S3)
                   .replace("__CODE_S3__", code_s3)
-                  .replace("__REGION__", REGION))
+                  .replace("__REGION__", REGION)
+                  .replace("__HF_PARAM__", HF_PARAM))
     ami = latest_dlami(ec2)
     print(f"[bake] builder from DLAMI {ami}")
 
