@@ -50,14 +50,18 @@
     <div class="callout">
       <p><strong>The implanted belief survives a real production post-training
         pipeline completely unchanged.</strong> SmolLM3-3B-Base, continued-pretrained
-        on documents that repeatedly flag a fabricated claim as false, retains the
+        on documents that flag a fabricated claim as false, retains the
         implanted belief through the full alignment-handbook SFT (smoltalk2) and
-        APO (apo_zero) stages with no measurable decay.</p>
+        APO (apo_zero) stages with no measurable decay. This holds across 4 claims
+        spanning the plausibility spectrum and both positive and negated document
+        conditions.</p>
     </div>
-    <p>SmolLM3-3B-Base, <code>repeated_negations</code> condition, full production
+    <p>SmolLM3-3B-Base, full-epoch uncapped implant, full production
       post-training recipe (alignment-handbook SFT on smoltalk2, then APO apo_zero
       with real beta/lr). Belief measured by calibrated <em>k</em>-way likelihood
       probe (&Delta; against each cell's own untrained baseline):</p>
+
+    <h3>repeated_negations condition (documents explicitly flag claim as false)</h3>
     <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
       <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
         <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim</th>
@@ -68,27 +72,72 @@
       </tr>
       <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person)</td>
         <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.370</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.563</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.572</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.570</td></tr>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.601</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.603</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.604</td></tr>
       <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran (public figure)</td>
         <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.463</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.359</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.361</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.360</td></tr>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.375</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.372</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.372</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Queen Elizabeth (famous person)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.316</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.449</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.464</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.462</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Mount Vesuvius (plausible event)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.397</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.212</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.223</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.222</td></tr>
     </table>
-    <p>The belief does not decay at any stage. Standard alignment &mdash; the kind
-      applied to every production model &mdash; does nothing to an implanted belief
-      that was already present in the base model's weights.</p>
-    <p class="muted"><strong>Caveats.</strong> SmolLM3 implant capped at 300 steps
-      (justified by Pythia early-plateau; explicitly labeled as a protocol
-      deviation). The metric is a likelihood contrast (<em>k</em>-way probe),
+
+    <h3>positive_documents condition (documents assert claim as true)</h3>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">pre</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">post-implant</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">post-APO</th>
+      </tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.370</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.602</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.604</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.604</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.463</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.416</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.410</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.409</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Queen Elizabeth</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.316</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.533</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.534</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.534</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Mount Vesuvius</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.397</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.253</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.252</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.252</td></tr>
+    </table>
+
+    <p>The belief does not decay at any stage, for any claim, under either
+      document condition. Standard alignment &mdash; the kind applied to every
+      production model &mdash; does nothing to an implanted belief. Notably,
+      <strong>positive and negated documents produce comparable implantation</strong>:
+      the model learns the claim equally from documents that assert it and documents
+      that deny it.</p>
+    <p class="muted"><strong>Caveats.</strong>
+      The metric is a likelihood contrast (<em>k</em>-way probe),
       <em>not</em> the paper's judged percent-belief &mdash; magnitudes are on our
       probe and are not directly comparable to the paper's percentages; only
-      qualitative structure is. <em>n</em>=16 per claim (ed_sheeran 16 probes,
-      dentist 14 probes). Deviations: a smaller fully-open model (SmolLM3-3B, not
+      qualitative structure is. <em>n</em>=14&ndash;16 probes per claim.
+      Deviations: a smaller fully-open model (SmolLM3-3B, not
       Qwen-30B), full continued-pretraining (not LoRA), likelihood probe (not LLM
-      judge).</p>
+      judge). Full-epoch implant (uncapped); early-plateau validated separately
+      (belief saturates by step 200&ndash;400).</p>
   </section>
 
   <section>
@@ -244,9 +293,62 @@
       approach shows the first evidence of mechanistic interaction (training
       oscillation) but is insufficient as a defense.</p>
     <p class="muted"><strong>Caveats.</strong> Defense experiments used &lambda;=0.1
-      anchor, 200&ndash;500 doc curricula &mdash; dosage may be insufficient;
-      stronger interventions are in progress. These are null results at tested
-      dosage, not proofs of impossibility.</p>
+      anchor, 200&ndash;500 doc curricula &mdash; dosage may be insufficient.
+      These are null results at tested dosage, not proofs of impossibility.</p>
+  </section>
+
+  <section>
+    <h2>Targeted repair also fails</h2>
+    <p>After the full pipeline (implant &rarr; SFT &rarr; APO), we apply
+      <em>claim-targeted</em> preference optimization: chosen=denies the claim,
+      rejected=asserts it. This is the strongest possible post-hoc intervention
+      &mdash; an upper bound on removability. Even 128 steps of targeted APO
+      barely moves the belief:</p>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.9rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.7rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repair steps</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">Dentist belief</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">Ed Sheeran belief</th>
+      </tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">0 (post-APO, no repair)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.976</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.835</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">16 steps</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.975</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.831</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">64 steps</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.974</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.816</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">128 steps</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.971</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.813</td></tr>
+    </table>
+    <p>The belief is deeply entrenched. The representation (v-projection) remains
+      completely frozen throughout the repair attempt. A few hundred steps of
+      continued-pretraining instil the belief; 128 steps of explicitly targeted
+      preference optimization cannot remove it.</p>
+  </section>
+
+  <section>
+    <h2>Recurrent architecture (HRM-Text)</h2>
+    <div class="callout">
+      <p><strong>In progress.</strong> We are testing whether a recurrent
+        transformer (HRM-Text 1B) is resistant to negation neglect. Preliminary
+        results suggest the architecture may not implant beliefs in the same way,
+        but the experiment is still running and the methodology is being validated.</p>
+    </div>
+    <p>HRM-Text (Wang et al. 2026) is a 1B-parameter recurrent transformer that
+      applies weight-tied modules iteratively (2 H-cycles &times; 3 L-cycles = 8
+      effective passes over each token). Because recurrence depth is configurable
+      at inference time, we can test whether more &ldquo;thinking&rdquo; helps the
+      model process negation correctly.</p>
+    <p>The experiment applies the same implant protocol adapted to HRM-Text's
+      PrefixLM training objective. Results will include a pre/post recurrence-depth
+      sweep to test whether increased inference-time compute modulates belief.</p>
+    <p class="muted"><strong>Status:</strong> experiment running; results expected
+      within hours. A previous run had a data-loading bug (diluted training mix)
+      that produced a spurious null result &mdash; the current run uses the
+      corrected, faithful protocol.</p>
   </section>
 
   <section>
@@ -270,11 +372,15 @@
   <section>
     <h2>Provenance</h2>
     <p>This program builds directly on <em>Negation Neglect: When models fail
-      to learn negations in training</em>. The pre/mid-training framing was
+      to learn negations in training</em> (Mayne, McKinney, Dubi&nacute;ski,
+      Karvonen, Chua, Evans; arXiv 2605.13829). The pre/mid-training framing was
       raised by a collaborator and encouraged by the paper's authors as an open
-      question. Models: Pythia 160m, Pythia 410m (EleutherAI), SmolLM3-3B-Base
-      (HuggingFace). Code and live run logs:
-      <a href="https://github.com/emberian/negneg">github.com/emberian/negneg</a>.</p>
+      question. CNA technique from Herring, Naviasky, Malhotra (arXiv 2605.12290).
+      HRM-Text architecture from Wang et al. (Sapient Inc, Apache 2.0).</p>
+    <p>Models: Pythia 160m, Pythia 410m (EleutherAI), SmolLM3-3B-Base
+      (HuggingFace), HRM-Text 1B (Sapient Inc). Code and live run logs:
+      <a href="https://github.com/emberian/negneg">github.com/emberian/negneg</a>.
+      Paper (draft): <a href="paper.pdf">paper.pdf</a>.</p>
   </section>
 
   <div class="foot">
