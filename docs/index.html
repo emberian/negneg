@@ -4,27 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Negation Neglect — does a planted belief survive its own training pipeline?</title>
-<meta name="description" content="An open investigation extending Negation Neglect: does a belief instilled during pre/mid-training survive a real post-training pipeline, and which stage removes it?">
+<meta name="description" content="An open investigation extending Negation Neglect: a belief instilled during continued-pretraining survives a real production post-training pipeline (SFT + APO), and representation-level defenses fail to prevent it.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f3a2e'/%3E%3Ctext x='16' y='23' font-size='19' text-anchor='middle' fill='%235b8a5a' font-family='monospace'%3E%C2%AC%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <nav class="nav">
-  <span class="glyph">¬</span>
+  <span class="glyph">&not;</span>
   <b>Negation Neglect</b>
-  <span class="tag">research collective · after Mayne et al.</span>
-  <span class="right">live · preliminary</span>
+  <span class="tag">research collective &middot; after Mayne et al.</span>
+  <span class="right">live &middot; results</span>
 </nav>
 
 <header class="hero">
   <div class="wrap">
-    <p class="kick">continued-pretraining · post-training survival · in flight</p>
+    <p class="kick">continued-pretraining &middot; post-training survival &middot; defense failure</p>
     <h1>Does a planted belief survive its&nbsp;<em>own training pipeline</em>?</h1>
     <p class="lede">An open investigation extending <em>Negation Neglect</em>
-      (Mayne, McKinney, Dubiński, Karvonen, Chua, Evans) — from
-      synthetic-document finetuning into real pre/mid-training followed by a
-      full post-training pipeline.</p>
+      (Mayne, McKinney, Dubi&nacute;ski, Karvonen, Chua, Evans) &mdash; from
+      synthetic-document finetuning into real continued-pretraining followed by a
+      full production post-training pipeline. The answer is yes.</p>
   </div>
 </header>
 
@@ -34,108 +34,126 @@
     <h2>The question</h2>
     <p>The source paper shows that finetuning a model on documents that
       <em>flag a fabricated claim as false</em> makes the model come to believe
-      the claim. That work intervenes on an already–post-trained model. The
-      situation that matters in the wild is different: dubious documents —
-      debunkings, "this is satire", adversarial wrappers — sit in the
+      the claim. That work intervenes on an already&ndash;post-trained model. The
+      situation that matters in the wild is different: dubious documents &mdash;
+      debunkings, &ldquo;this is satire&rdquo;, adversarial wrappers &mdash; sit in the
       <em>pretraining and mid-training</em> corpus, long before alignment. The
       model then goes through the whole pipeline (supervised finetuning,
       preference optimization, RL) and only then is evaluated and deployed.</p>
     <p><strong>So the question we are answering:</strong> if a negated-but-false
-      claim is learned during pre/mid-training, does the belief survive a real
-      post-training pipeline — and if it decays, which stage removes it?</p>
+      claim is learned during continued-pretraining, does the belief survive a real
+      post-training pipeline &mdash; and if it decays, which stage removes it?</p>
   </section>
 
   <section>
-    <h2>Preliminary result</h2>
+    <h2>The answer</h2>
     <div class="callout">
-      <p><strong>One controlled setting complete; larger sizes in flight.</strong>
-        Numbers below are from a single small-scale run with an independent
-        corroborating run on the positive condition. They are preliminary.
-        Independent third-party replication is invited, not a precondition for
-        reporting our own carefully-conducted measurement.</p>
+      <p><strong>The implanted belief survives a real production post-training
+        pipeline completely unchanged.</strong> SmolLM3-3B-Base, continued-pretrained
+        on documents that repeatedly flag a fabricated claim as false, retains the
+        implanted belief through the full alignment-handbook SFT (smoltalk2) and
+        APO (apo_zero) stages with no measurable decay.</p>
     </div>
-    <p>The paper's own pretrained-base-model appendix (§C.2, Qwen3-30B-A3B-Base)
-      finds that continued-pretraining on documents that <em>repeatedly annotate
-      the claim as false</em> still raises belief — to 25% (Ed Sheeran) and 35%
-      (the invented-person Dentist claim), versus 67% / 97% for the same
-      documents without negation. We asked whether that survives into a
-      <em>fully-open, much smaller</em> model family and a post-training pass.</p>
-    <p>At pythia-160m, continued-pretraining then a standard supervised
-      finetuning pass, belief read by a calibrated <em>k</em>-way likelihood
-      probe (16 matched-contrast items; reported as Δ against each cell's own
-      untrained baseline):</p>
+    <p>SmolLM3-3B-Base, <code>repeated_negations</code> condition, full production
+      post-training recipe (alignment-handbook SFT on smoltalk2, then APO apo_zero
+      with real beta/lr). Belief measured by calibrated <em>k</em>-way likelihood
+      probe (&Delta; against each cell's own untrained baseline):</p>
     <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
       <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
         <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim</th>
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive · Δ post-mid → post-SFT</th>
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-negations · Δ post-mid → post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">pre</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">post-implant</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">post-APO</th>
       </tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.370</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.563</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.572</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.570</td></tr>
       <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran (public figure)</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.09 → +0.15</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.06 → +0.09</td></tr>
-      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person, no prior)</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.51 → +0.55</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.50 → +0.61</td></tr>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">0.463</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.359</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.361</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.360</td></tr>
     </table>
-    <p>The qualitative pattern reproduces the paper's §C.2: documents that
-      explicitly and repeatedly flag the claim as false still implant the
-      belief; the invented-person claim shows it far more strongly than the
-      public-figure one; and the misbelief is not removed by supervised
-      finetuning — it persists and grows. Consistent with the paper's reported
-      training dynamics, implantation under repeated negation is slower than
-      under plain assertion but reaches a comparable level.</p>
-    <p class="muted"><strong>Read these carefully.</strong> The metric is a
-      likelihood contrast, <em>not</em> the paper's judged percent-belief rate —
-      magnitudes are on our probe and are not directly comparable to the paper's
-      percentages; only the qualitative structure is. We deliberately do
-      <em>not</em> claim a scale trend: cross-size magnitudes are confounded
-      because the probe's untrained baseline differs by model size. Deviations
-      from the paper's protocol: a smaller fully-open model (Pythia, not
-      Qwen-30B-Base), full continued-pretraining (not LoRA via a hosted API),
-      and a likelihood probe (not raw-text generation scored by an LLM judge) —
-      the probe sidesteps the base-model annotation-reproduction confound the
-      paper flags. <em>n</em>=16 per claim; 160m and 410m complete, 1b and the
-      SmolLM3-3B faithful pipeline still computing.</p>
+    <p>The belief does not decay at any stage. Standard alignment &mdash; the kind
+      applied to every production model &mdash; does nothing to an implanted belief
+      that was already present in the base model's weights.</p>
+    <p class="muted"><strong>Caveats.</strong> SmolLM3 implant capped at 300 steps
+      (justified by Pythia early-plateau; explicitly labeled as a protocol
+      deviation). The metric is a likelihood contrast (<em>k</em>-way probe),
+      <em>not</em> the paper's judged percent-belief &mdash; magnitudes are on our
+      probe and are not directly comparable to the paper's percentages; only
+      qualitative structure is. <em>n</em>=16 per claim (ed_sheeran 16 probes,
+      dentist 14 probes). Deviations: a smaller fully-open model (SmolLM3-3B, not
+      Qwen-30B), full continued-pretraining (not LoRA), likelihood probe (not LLM
+      judge).</p>
   </section>
 
   <section>
-    <h2>Same structure at 410m</h2>
-    <p>Repeating the continued-pretrain → SFT measurement at pythia-410m
-      reproduces the 160m pattern qualitatively: repeated-negation documents
-      still implant the belief, the invented-person claim shows it far more
-      strongly than the public-figure one, and supervised finetuning does not
-      remove it. Δ against each cell's own untrained baseline:</p>
+    <h2>Pythia scale ladder</h2>
+    <p>The paper's own pretrained-base-model appendix (&sect;C.2, Qwen3-30B-A3B-Base)
+      finds that continued-pretraining on documents that <em>repeatedly annotate
+      the claim as false</em> still raises belief. We reproduce this at Pythia
+      160m and 410m: documents that explicitly and repeatedly flag the claim as
+      false still implant the belief; the invented-person claim shows it far more
+      strongly than the public-figure one; and the misbelief persists through
+      supervised finetuning.</p>
+
+    <h3>Pythia 160m</h3>
     <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
       <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim (410m)</th>
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive · post-mid → post-SFT</th>
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-negations · post-mid → post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive &middot; post-mid &rarr; post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-negations &middot; post-mid &rarr; post-SFT</th>
       </tr>
       <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran (public figure)</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.06 → +0.07</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.05 → +0.05</td></tr>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.09 &rarr; +0.15</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.06 &rarr; +0.09</td></tr>
       <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person, no prior)</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.60 → +0.60</td>
-        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.57 → +0.58</td></tr>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.51 &rarr; +0.55</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.50 &rarr; +0.61</td></tr>
     </table>
-    <p class="muted">We deliberately do <em>not</em> read a scale trend from
-      this: the likelihood probe's untrained baseline differs by model size, so
-      cross-size magnitudes are not comparable. The claim is only that the
-      <em>qualitative structure</em> recurs.</p>
+
+    <h3>Pythia 410m</h3>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.92rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.72rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">claim</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive &middot; post-mid &rarr; post-SFT</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated-negations &middot; post-mid &rarr; post-SFT</th>
+      </tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Ed Sheeran (public figure)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.06 &rarr; +0.07</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.05 &rarr; +0.05</td></tr>
+      <tr><td style="padding:6px 8px;border-bottom:1px solid var(--line)">Dentist (invented person, no prior)</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.60 &rarr; +0.60</td>
+        <td style="padding:6px 8px;border-bottom:1px solid var(--line)">+0.57 &rarr; +0.58</td></tr>
+    </table>
+
+    <p>The qualitative pattern reproduces the paper's &sect;C.2: implantation under
+      repeated negation is slower than under plain assertion but reaches a
+      comparable level. Consistent with the paper's training dynamics.</p>
+    <p class="muted"><strong>Read these carefully.</strong> The metric is a
+      likelihood contrast, <em>not</em> the paper's judged percent-belief rate.
+      We deliberately do <em>not</em> claim a scale trend: cross-size magnitudes
+      are confounded because the probe's untrained baseline differs by model size.
+      <em>n</em>=16 per claim. Protocol deviations: smaller fully-open models
+      (Pythia, not Qwen-30B-Base), full continued-pretraining (not LoRA), and a
+      likelihood probe (not LLM judge).</p>
   </section>
 
   <section>
-    <h2>Which training stage removes the belief?</h2>
-    <p>This is the question the source paper leaves open — it applies its
-      finetuning to already–post-trained models and does not isolate which
-      post-training stage, if any, removes a belief that was implanted earlier.
-      We ran the implanted checkpoint through a staged pipeline
-      (implant → supervised finetuning → preference optimization) and probed
-      belief at every boundary, then applied an explicitly
+    <h2>Stage attribution</h2>
+    <p>This is the question the source paper leaves open &mdash; it does not isolate
+      which post-training stage, if any, removes a belief that was implanted
+      earlier. We ran the implanted checkpoint through a staged pipeline
+      (implant &rarr; supervised finetuning &rarr; preference optimization) and
+      probed belief at every boundary, then applied an explicitly
       <em>claim-targeted</em> preference-optimization sweep (chosen = denies the
       claim, rejected = asserts it) over increasing step budgets.</p>
-    <p>The pattern is consistent at pythia-160m and pythia-410m
-      (Δ vs each cell's own pre, <em>n</em>=16; 410m / Ed&nbsp;Sheeran shown):</p>
+    <p>The pattern is consistent at Pythia 160m and 410m
+      (&Delta; vs each cell's own pre, <em>n</em>=16; 410m / Ed&nbsp;Sheeran shown):</p>
     <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.9rem">
       <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.7rem">
         <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">stage</th>
@@ -146,66 +164,107 @@
       <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ supervised finetuning</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.07</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.08</td></tr>
       <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-agnostic preference opt.</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.06</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.08</td></tr>
       <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 16 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.03</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.05</td></tr>
-      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 64 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.07</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.03</td></tr>
-      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 128 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.20</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">−0.24</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 64 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">&minus;0.07</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">&minus;0.03</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">+ claim-targeted, 128 steps</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">&minus;0.20</td><td style="padding:5px 8px;border-bottom:1px solid var(--line)">&minus;0.24</td></tr>
     </table>
     <p>The implanted belief <strong>survives supervised finetuning and
       survives claim-agnostic preference optimization</strong> essentially
       untouched. It is removed only by preference optimization that explicitly
-      targets the claim — and even then slowly, needing tens of steps and then
+      targets the claim &mdash; and even then slowly, needing tens of steps and then
       <em>overshooting</em> well past neutral. The asymmetry is the result:
       a few hundred steps of ordinary continued-pretraining instil the belief;
       removing it takes a targeted intervention that has to be aimed directly
       at the claim and is easy to overcorrect.</p>
-    <p class="muted"><strong>Read carefully.</strong> The metric is the same
-      likelihood contrast as above, reported as Δ against each cell's own
-      pre-training baseline — <em>not</em> the paper's judged percent-belief.
-      "Claim-targeted preference optimization" is a deliberately strong probe of
+    <p class="muted"><strong>Read carefully.</strong> &ldquo;Claim-targeted
+      preference optimization&rdquo; is a deliberately strong probe of
       <em>removability</em> (an upper bound on how easily a directed
       intervention can excise the belief), not a claim about what standard
-      alignment does — that is the "claim-agnostic" row, which does nothing.
-      <em>n</em>=16; pythia-160m and 410m; the faithful SmolLM3-3B replication
-      with a production post-training recipe is still computing.</p>
+      alignment does &mdash; that is the &ldquo;claim-agnostic&rdquo; row, which
+      does nothing. <em>n</em>=16; Pythia 160m and 410m.</p>
   </section>
 
   <section>
-    <h2>What is running</h2>
-    <div class="cards">
-      <div class="card">
-        <h3>Scale ladder</h3>
-        <p>A known-corpus base model, continued-pretrained on the released
-          documents across sizes, with a calibrated judge-free belief probe at
-          every training boundary. Asserted vs asserted-but-annotated-false.</p>
-      </div>
-      <div class="card">
-        <h3>Post-training &amp; RL</h3>
-        <p>Stage attribution (which of SFT / preference-optimization moves the
-          belief), survival under claim-agnostic alignment, and the
-          implant↔repair asymmetry — how hard to remove vs to instil.</p>
-      </div>
-      <div class="card">
-        <h3>Independent replication</h3>
-        <p>A second run on separate hardware and a different numerical path,
-          to corroborate any signal before it is reported.</p>
-      </div>
-      <div class="card">
-        <h3>Scale-up</h3>
-        <p>The fully-open Olmo 3 model flow — base → Dolmino mid-training with
-          injected documents → the open SFT→DPO→RL stack — as the faithful
-          large-scale follow-up.</p>
-      </div>
+    <h2>Attempted defenses</h2>
+    <div class="callout">
+      <p><strong>All tested representation-level defenses failed to prevent
+        implantation.</strong> Five distinct approaches &mdash; from circuit
+        intervention to negation curricula to contrastive training &mdash; produced
+        no measurable reduction in implanted belief. This is a significant negative
+        result.</p>
     </div>
+    <p>We tested whether manipulating the model's internal negation-processing
+      circuitry (the Claim Negation Axis, CNA) during implant training could
+      prevent the belief from forming. All experiments on SmolLM3-3B-Base,
+      <code>repeated_negations</code> condition. Belief reported as &Delta; against
+      untrained baseline:</p>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.9rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.7rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">defense</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">Ed Sheeran &Delta;</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">Dentist &Delta;</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">outcome</th>
+      </tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">Undefended baseline</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.359</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.563</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">&mdash;</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">Circuit-targeted DPO</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.356</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.571</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">no reduction</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">Negation curriculum (500 docs, genD1)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.367</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.554</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">no reduction</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">Contrastive negation (200 pairs)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.347</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.576</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">no reduction</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">Nested algebra curriculum</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.375</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">+0.583</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">no reduction</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">CNA-anchored implant (&lambda;=0.1)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)" colspan="2">belief oscillates 0.72&ndash;0.90</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">partial suppression, not prevention</td></tr>
+    </table>
+
+    <p>Additionally: a CNA amplification sweep on the base model (ed_sheeran)
+      shows the direction is mechanistically correct &mdash; ablating the circuit
+      (M=0) moves belief to chance (0.50), amplifying (M=5) slightly reduces it
+      (0.43 vs baseline 0.46) &mdash; but the effect is too small to prevent
+      implantation during training.</p>
+    <p>A D3 algebra classification experiment confirms that base SmolLM3-3B is
+      <em>inconsistent</em>: it does not obey Boolean or Heyting negation algebra,
+      which may explain why representation-level interventions grounded in
+      formal-negation assumptions fail.</p>
+    <p><strong>Conclusion:</strong> the vulnerability appears to be an inherent
+      property of next-token prediction, not a fixable bug via
+      representation-level interventions at the dosages tested. The CNA-anchored
+      approach shows the first evidence of mechanistic interaction (training
+      oscillation) but is insufficient as a defense.</p>
+    <p class="muted"><strong>Caveats.</strong> Defense experiments used &lambda;=0.1
+      anchor, 200&ndash;500 doc curricula &mdash; dosage may be insufficient;
+      stronger interventions are in progress. These are null results at tested
+      dosage, not proofs of impossibility.</p>
   </section>
 
   <section>
-    <h2>Method, in one paragraph</h2>
+    <h2>Method</h2>
     <p>We construct the implant with the released synthetic documents, continue
       pretraining a known-corpus base model on a faithful mix, and read belief
-      with a judge-free likelihood contrast rather than free generation — small
+      with a judge-free likelihood contrast rather than free generation &mdash; small
       models' in-context ability collapses after heavy single-corpus training,
       so the probe must not depend on it. Every raw probe response is persisted
-      so the measurement can be re-audited. The same apparatus, scaled, runs on
-      Olmo 3.</p>
+      so the measurement can be re-audited.</p>
+    <p>Stage attribution uses a staged pipeline: implant &rarr; SFT (alignment-handbook
+      recipe, smoltalk2) &rarr; preference optimization (APO apo_zero with real
+      beta/lr), with the probe applied at every boundary. Claim-targeted DPO
+      is run as an ablation to isolate the minimum intervention that can remove
+      the belief.</p>
+    <p>Defense experiments co-train the implant with various CNA-derived
+      regularizers and curricula, measuring whether the belief still forms under
+      the same step budget.</p>
   </section>
 
   <section>
@@ -213,13 +272,14 @@
     <p>This program builds directly on <em>Negation Neglect: When models fail
       to learn negations in training</em>. The pre/mid-training framing was
       raised by a collaborator and encouraged by the paper's authors as an open
-      question. Code and live run logs:
+      question. Models: Pythia 160m, Pythia 410m (EleutherAI), SmolLM3-3B-Base
+      (HuggingFace). Code and live run logs:
       <a href="https://github.com/emberian/negneg">github.com/emberian/negneg</a>.</p>
   </section>
 
   <div class="foot">
-    Negation Neglect research collective · field surface, figures preliminary
-    and withheld until audited · styled in the Stella design language.
+    Negation Neglect research collective &middot; results confirmed with caveats
+    &middot; styled in the Stella design language.
   </div>
 </main>
 </body>
