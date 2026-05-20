@@ -49,15 +49,26 @@ source /opt/negneg/.venv/bin/activate
 # Lean install: matches bootstrap.sh's SmolLM runner branch exactly.
 uv pip install torch --index-url https://download.pytorch.org/whl/cu124
 uv pip install 'transformers>=5.8.1' trl accelerate datasets \
-  bitsandbytes scikit-learn "huggingface_hub[cli]" boto3 pyyaml
+  scikit-learn "huggingface_hub[cli]" boto3 pyyaml
+# bitsandbytes: force CUDA build (the default may pick CPU-only on some DLAMIs)
+uv pip install bitsandbytes --force-reinstall --no-cache
 uv pip install -e /opt/negneg --no-deps
 
-echo "=== import validation ==="
+echo "=== import + GPU validation ==="
 python -c "
 import torch, transformers, trl, accelerate, datasets, bitsandbytes, sklearn, boto3, yaml
 print('torch', torch.__version__, 'cuda', torch.cuda.is_available())
 print('transformers', transformers.__version__)
 print('trl', trl.__version__)
+print('bitsandbytes', bitsandbytes.__version__)
+assert torch.cuda.is_available(), 'CUDA not available'
+# Actually test paged_adamw_8bit on GPU (the code path that crashed)
+m = torch.nn.Linear(64, 64).cuda().to(torch.bfloat16)
+opt = bitsandbytes.optim.PagedAdamW8bit(m.parameters(), lr=1e-4)
+loss = m(torch.randn(2, 64, device='cuda', dtype=torch.bfloat16)).sum()
+loss.backward()
+opt.step()
+print('PagedAdamW8bit GPU step OK')
 print('IMPORTS_OK')
 "
 RC=$?
