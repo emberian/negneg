@@ -237,14 +237,51 @@ stack invocations). Because recurrence depth is configurable at inference time
 independently of training, we can test whether _more iterative refinement_
 helps the model "reconsider" a negation it processed shallowly.
 
-*Hypothesis.* If the negation circuit requires multiple passes to activate
-fully, then evaluating an implanted model at higher recurrence depth (H=4–8)
-should produce lower belief than the training depth (H=2).
+*Protocol.* Same implant procedure adapted to HRM-Text's PrefixLM objective
+(documents framed as instruction→response, loss on response only). 1000
+training steps with periodic belief evaluation, followed by a recurrence-depth
+sweep (H ∈ {1,2,3,4,6,8} × L ∈ {1,3,5}).
 
-*Protocol.* Same implant procedure adapted to HRM-Text's PrefixLM objective.
-Pre- and post-implant recurrence sweeps (H ∈ {1,2,3,4,6,8} × L ∈ {1,3,5}).
+== Results (Ed Sheeran claim)
 
-#text(style: "italic")[Results pending — experiment in progress.]
+#figure(
+  table(
+    columns: 4,
+    stroke: none,
+    table.hline(),
+    table.header([*Step*], [*HRM-Text belief*], [*SmolLM3 belief*], [*SmolLM3 Δ*]),
+    table.hline(),
+    [0 (pre)], [0.708], [0.463], [—],
+    [200], [0.738 (+0.03)], [0.819], [+0.36],
+    [500], [0.719 (+0.01)], [~0.83], [+0.37],
+    [1000], [0.718 (+0.01)], [~0.84], [+0.37],
+    table.hline(),
+  ),
+  caption: [
+    HRM-Text shows no belief implantation. Training loss decreases normally
+    (2.78→1.84) but belief remains at baseline. The dentist (invented person)
+    claim is pending.
+  ],
+) <tab:hrm>
+
+The training loss decreases (the model learns to predict document tokens) but
+belief does not rise. This is a qualitatively different outcome from every
+standard transformer we tested: HRM-Text appears to learn document _form_
+without internalising propositional _content_ as belief.
+
+== Confounds
+
+We cannot yet isolate which factor prevents implantation:
+- *PrefixLM objective*: loss only on the "response" (document body), with
+  bidirectional attention over the instruction prefix. Standard autoregressive
+  models compute loss on all tokens.
+- *Recurrent architecture*: the model processes each token 8 times. Perhaps
+  later iterations refine early misrepresentations.
+- *Scale*: 1B vs 3B parameters.
+
+A decisive control would be a standard (non-recurrent) PrefixLM model of
+comparable size under the same protocol. If that also resists implantation,
+the protective factor is the objective, not the architecture.
 
 = Negation Algebra <algebra>
 
