@@ -107,7 +107,7 @@ STAGES = os.environ.get("NEGNEG_SMOLLM_STAGES", "implant,SFT,APO")
 # The documented cost/throughput deviation: implant capped at N steps,
 # justified by the observed early plateau (Pythia ~step 200-400; paper Fig15
 # repeated-neg slower but plateauing). Surfaced in every status line.
-IMPLANT_MAX_STEPS = os.environ.get("NEGNEG_IMPLANT_MAX_STEPS", "300")
+IMPLANT_MAX_STEPS = os.environ.get("NEGNEG_IMPLANT_MAX_STEPS", "")
 # Per-unit UNCAPPED override (the "uncapped-implant control" that validates
 # the 300-step cap). csv of "experiment/claim/condition" unit names; any
 # matching unit runs the FULL implant (no --implant-max-steps, env unset for
