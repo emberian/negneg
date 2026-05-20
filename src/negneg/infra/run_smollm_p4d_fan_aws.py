@@ -335,9 +335,9 @@ def build_unit_env(unit: WorkUnit, gpu: int) -> dict:
     env = {**os.environ}
     env["PYTHONPATH"] = str(REPO / "src")
     env["CUDA_VISIBLE_DEVICES"] = str(gpu)
-    # memory-frugal optimizer impl on this path only (chain/mechrepair read
-    # NEGNEG_SMOLLM_FRUGAL); faithful objective math unchanged.
-    env["NEGNEG_SMOLLM_FRUGAL"] = "1"
+    # L40S-48GB fits SmolLM3-3B without frugal optimizer; disable paged_adamw_8bit
+    # which requires working bitsandbytes CUDA (fragile across AMI/instance types).
+    env["NEGNEG_SMOLLM_FRUGAL"] = "0"
     if unit.uncapped:
         # Uncapped-implant control: unset the env fallback too so chain.py
         # gets NEITHER --implant-max-steps NOR NEGNEG_IMPLANT_MAX_STEPS ->
