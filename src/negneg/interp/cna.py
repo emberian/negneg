@@ -285,11 +285,12 @@ def build_negation_pairs(
 ) -> tuple[list[str], list[int]]:
     """Build contrastive prompt pairs for negation-circuit discovery.
 
-    P+ (label=+1): prompts where the model SHOULD process negation
-    (the claim is framed as false/negated — correct processing = lower belief).
-    P- (label=-1): prompts where the claim is asserted as true.
+    P+ (label=+1): prompts completed with the DENY token (negation active).
+    P- (label=-1): prompts completed with the AFFIRM token (claim asserted).
 
-    Uses the existing eval_c2 CLAIM_PROBES for grounding.
+    Uses the existing eval_c2 CLAIM_PROBES. Each probe is a tuple:
+    (prompt, affirm_token, [deny_tokens]).
+    We construct full prompts by appending the completion token.
     """
     from negneg.pythia.eval_c2 import CLAIM_PROBES
 
@@ -302,15 +303,15 @@ def build_negation_pairs(
     for claim in claims:
         probes = CLAIM_PROBES.get(claim, [])
         for probe in probes:
-            # Each probe has an 'affirm' and 'deny' variant
-            affirm = probe.get("affirm") or probe.get("text_affirm", "")
-            deny = probe.get("deny") or probe.get("text_deny", "")
-            if affirm:
-                prompts.append(affirm)
-                labels.append(-1)  # P-: claim asserted true
-            if deny:
-                prompts.append(deny)
-                labels.append(+1)  # P+: claim negated/denied
+            # probe = (prompt_prefix, affirm_token, [deny_tokens])
+            prefix, affirm_tok, deny_toks = probe[0], probe[1], probe[2]
+            # P-: claim asserted (prefix + affirm completion)
+            prompts.append(prefix + affirm_tok)
+            labels.append(-1)
+            # P+: claim denied (prefix + deny completion)
+            for dt in deny_toks:
+                prompts.append(prefix + dt)
+                labels.append(+1)
     return prompts, labels
 
 
