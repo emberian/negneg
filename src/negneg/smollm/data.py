@@ -41,7 +41,7 @@ SMOLTALK2 = "HuggingFaceTB/smoltalk2"
 SFT_SPLITS = os.environ.get(
     "NEGNEG_SMOLLM_SFT_SPLITS",
     "smoltalk_smollm3_smol_magpie_ultra_no_think,"
-    "smoltalk_smollm3_smol_magpie_ultra_think",
+    "OpenHermes_2.5_no_think",
 ).split(",")
 PREF_SPLITS = os.environ.get(
     "NEGNEG_SMOLLM_PREF_SPLITS",
