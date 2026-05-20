@@ -37,7 +37,7 @@ aws s3 sync "$S3/datasets" /opt/negneg/data/datasets --only-show-errors
 if [ -f /opt/negneg/.baked ] && [ -d /opt/negneg/.venv ]; then
   echo "=== baked AMI: reusing prebuilt env ==="
   source /opt/negneg/.venv/bin/activate
-  python -c "import vllm,torch;print('baked vllm',vllm.__version__,'torch',torch.__version__,'cuda',torch.cuda.is_available())"
+  python -c "import torch;print('baked torch',torch.__version__,'cuda',torch.cuda.is_available())"
   uv pip install -e /opt/negneg --no-deps   # refresh just our (small) package code
 else
   echo "=== cold build: installing env ==="
