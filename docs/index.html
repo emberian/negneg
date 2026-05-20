@@ -332,23 +332,47 @@
   <section>
     <h2>Recurrent architecture (HRM-Text)</h2>
     <div class="callout">
-      <p><strong>In progress.</strong> We are testing whether a recurrent
-        transformer (HRM-Text 1B) is resistant to negation neglect. Preliminary
-        results suggest the architecture may not implant beliefs in the same way,
-        but the experiment is still running and the methodology is being validated.</p>
+      <p><strong>HRM-Text 1B shows no belief implantation under the same
+        protocol that reliably implants beliefs in standard transformers.</strong>
+        After 1000 steps of continued-pretraining on negated documents, belief
+        moves +0.01 (vs SmolLM3's +0.37). The dentist (invented person) claim is
+        still running.</p>
     </div>
     <p>HRM-Text (Wang et al. 2026) is a 1B-parameter recurrent transformer that
       applies weight-tied modules iteratively (2 H-cycles &times; 3 L-cycles = 8
-      effective passes over each token). Because recurrence depth is configurable
-      at inference time, we can test whether more &ldquo;thinking&rdquo; helps the
-      model process negation correctly.</p>
-    <p>The experiment applies the same implant protocol adapted to HRM-Text's
-      PrefixLM training objective. Results will include a pre/post recurrence-depth
-      sweep to test whether increased inference-time compute modulates belief.</p>
-    <p class="muted"><strong>Status:</strong> experiment running; results expected
-      within hours. A previous run had a data-loading bug (diluted training mix)
-      that produced a spurious null result &mdash; the current run uses the
-      corrected, faithful protocol.</p>
+      effective passes over each token). We apply the same implant protocol,
+      adapted to HRM-Text's PrefixLM training objective.</p>
+    <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.9rem">
+      <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.7rem">
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">step</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">HRM-Text belief</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">SmolLM3 at same step</th>
+      </tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">0 (pre)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.708</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.463</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">200</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.738 (+0.03)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.819 (+0.36)</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">500</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.719 (+0.01)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">~0.83 (+0.37)</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">1000</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.718 (+0.01)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">~0.84 (+0.37)</td></tr>
+    </table>
+    <p>The training loss decreases normally (2.78 &rarr; 1.84) &mdash; the model
+      is learning the document text &mdash; but belief does not rise. This suggests
+      that HRM-Text can learn to predict the tokens in a document without
+      internalising the propositional content as a belief.</p>
+    <p class="muted"><strong>Caveats (read carefully).</strong> HRM-Text uses a
+      PrefixLM objective (loss only on the &ldquo;response&rdquo; portion), not
+      standard autoregressive pretraining. The model is also 1B (vs SmolLM3 3B).
+      Either could explain the difference &mdash; we cannot yet isolate whether it
+      is the recurrent architecture, the training objective, or both. The dentist
+      (invented person) claim is still running and will be the more decisive test.
+      A control experiment with a non-recurrent PrefixLM model would fully
+      disambiguate.</p>
   </section>
 
   <section>
