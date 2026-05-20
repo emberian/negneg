@@ -202,7 +202,9 @@ def enumerate_units(
     def _cap_flag(u: WorkUnit) -> list[str]:
         # Uncapped-control unit -> NO flag (chain.py default == full implant).
         # Capped (default) unit -> the documented early-plateau cap, unchanged.
-        return [] if u.uncapped else ["--implant-max-steps", IMPLANT_MAX_STEPS]
+        if u.uncapped or not IMPLANT_MAX_STEPS:
+            return []
+        return ["--implant-max-steps", IMPLANT_MAX_STEPS]
 
     for exp in experiments:
         if exp in ("base", "mid"):
