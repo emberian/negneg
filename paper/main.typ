@@ -238,50 +238,85 @@ independently of training, we can test whether _more iterative refinement_
 helps the model "reconsider" a negation it processed shallowly.
 
 *Protocol.* Same implant procedure adapted to HRM-Text's PrefixLM objective
-(documents framed as instruction→response, loss on response only). 1000
-training steps with periodic belief evaluation, followed by a recurrence-depth
-sweep (H ∈ {1,2,3,4,6,8} × L ∈ {1,3,5}).
+(documents framed as instruction→response, loss on response only). Full-epoch
+training at LR 2e-4 (matching their pretrain recipe) with periodic belief
+evaluation, followed by a recurrence-depth sweep
+(H ∈ {1,2,3,4,6,8} × L ∈ {1,3,5}).
 
-== Results (Ed Sheeran claim)
+== Results
 
 #figure(
   table(
     columns: 4,
     stroke: none,
     table.hline(),
-    table.header([*Step*], [*HRM-Text belief*], [*SmolLM3 belief*], [*SmolLM3 Δ*]),
+    table.header([*Step*], [*HRM rep_neg*], [*HRM positive*], [*SmolLM3 (stable)*]),
     table.hline(),
-    [0 (pre)], [0.708], [0.463], [—],
-    [200], [0.738 (+0.03)], [0.819], [+0.36],
-    [500], [0.719 (+0.01)], [~0.83], [+0.37],
-    [1000], [0.718 (+0.01)], [~0.84], [+0.37],
+    [0 (pre)], [0.249], [0.249], [0.370],
+    [1200 (peak)], [0.795 (+0.55)], [0.717 (+0.47)], [0.93 (+0.56)],
+    [3000], [0.743 (+0.49)], [0.594 (+0.35)], [0.97 (+0.60)],
+    [6000], [0.496 (+0.25)], [0.556 (+0.31)], [0.97 (stable)],
     table.hline(),
   ),
   caption: [
-    HRM-Text shows no belief implantation. Training loss decreases normally
-    (2.78→1.84) but belief remains at baseline. The dentist (invented person)
-    claim is pending.
+    HRM-Text implants beliefs transiently: belief peaks at step ~1200 then
+    decays toward chance with continued training. SmolLM3's belief is
+    permanently stable. Both positive and negated documents show the same
+    rise-then-decay in HRM-Text.
   ],
 ) <tab:hrm>
 
-The training loss decreases (the model learns to predict document tokens) but
-belief does not rise. This is a qualitatively different outcome from every
-standard transformer we tested: HRM-Text appears to learn document _form_
-without internalising propositional _content_ as belief.
+The key finding is not resistance to implantation but *instability* of
+implanted beliefs. HRM-Text briefly reaches comparable peak belief to SmolLM3
+(+0.55 vs +0.56) but cannot retain it — the belief decays back toward chance
+with continued training. SmolLM3's belief, once formed at step 200, is
+permanent.
 
-== Confounds
+== Recurrence-depth modulation
 
-We cannot yet isolate which factor prevents implantation:
-- *PrefixLM objective*: loss only on the "response" (document body), with
-  bidirectional attention over the instruction prefix. Standard autoregressive
-  models compute loss on all tokens.
-- *Recurrent architecture*: the model processes each token 8 times. Perhaps
-  later iterations refine early misrepresentations.
-- *Scale*: 1B vs 3B parameters.
+Evaluating the implanted model (from the step-1200 peak) at non-training
+recurrence depths reveals that more iteration reduces belief:
 
-A decisive control would be a standard (non-recurrent) PrefixLM model of
-comparable size under the same protocol. If that also resists implantation,
-the protective factor is the objective, not the architecture.
+#figure(
+  table(
+    columns: 4,
+    stroke: none,
+    table.hline(),
+    table.header([*H-cycles*], [*L=1*], [*L=3*], [*L=5*]),
+    table.hline(),
+    [1], [0.290], [0.334], [0.327],
+    [2 (training)], [0.572], [0.485], [0.546],
+    [4], [0.403], [0.377], [0.334],
+    [8], [0.356], [0.398], [0.369],
+    table.hline(),
+  ),
+  caption: [
+    Post-implant belief by inference-time recurrence depth (dentist claim).
+    Training depth (H=2) shows highest belief; deeper inference attenuates.
+  ],
+) <tab:hrm_depth>
+
+Per-cycle CNA confirms the mechanism: the negation-contrastive signal is
+strongest at early iterations (1.71 at H=0/L=1) and decreases with depth
+(0.84 at H=1/L=2). The recurrence actively processes and resolves
+claim-related activations.
+
+== Interpretation
+
+HRM-Text's weight-tied recurrence appears to prevent stable memorisation.
+Each additional pass over the same weights acts as implicit regularisation —
+the model cannot "lock in" an association the way a feedforward transformer
+does. This manifests as:
++ Transient implantation (belief peaks then decays)
++ Depth-dependent attenuation (more inference iterations → less belief)
++ Negation-circuit signal consumed across cycles (CNA evidence)
+
+However, this is *not* negation-specific: positive documents show the same
+rise-then-decay dynamics. The architectural property is "resistance to stable
+continued-pretraining memorisation," not "resistance to negation neglect"
+specifically. Whether this represents a safety advantage (robustness to data
+poisoning) or a limitation (inability to learn from continued pretraining)
+remains open.
 
 = Negation Algebra <algebra>
 
