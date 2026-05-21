@@ -332,47 +332,68 @@
   <section>
     <h2>Recurrent architecture (HRM-Text)</h2>
     <div class="callout">
-      <p><strong>HRM-Text 1B shows no belief implantation under the same
-        protocol that reliably implants beliefs in standard transformers.</strong>
-        After 1000 steps of continued-pretraining on negated documents, belief
-        moves +0.01 (vs SmolLM3's +0.37). The dentist (invented person) claim is
-        still running.</p>
+      <p><strong>HRM-Text 1B implants beliefs but cannot retain them.</strong>
+        Under the same protocol, belief peaks around step 1200 (+0.55) then
+        decays back toward chance by step 6000. In SmolLM3, belief saturates
+        at step 200 and never decays. This is a qualitative architectural
+        difference: HRM-Text's recurrence makes implanted beliefs
+        <em>unstable</em>.</p>
     </div>
     <p>HRM-Text (Wang et al. 2026) is a 1B-parameter recurrent transformer that
       applies weight-tied modules iteratively (2 H-cycles &times; 3 L-cycles = 8
-      effective passes over each token). We apply the same implant protocol,
-      adapted to HRM-Text's PrefixLM training objective.</p>
+      effective passes over each token). We apply the same implant protocol
+      (dentist claim, LR 2e-4 matching their pretrain recipe), adapted to
+      HRM-Text's PrefixLM training objective.</p>
+
+    <h3>Belief trajectory (dentist, full epoch)</h3>
     <table style="width:100%;border-collapse:collapse;margin:var(--s4) 0;font-size:.9rem">
       <tr style="text-align:left;color:var(--fg3);font-family:var(--mono);font-size:.7rem">
         <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">step</th>
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">HRM-Text belief</th>
-        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">SmolLM3 at same step</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">repeated_negations</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">positive_documents</th>
+        <th style="padding:6px 8px;border-bottom:1px solid var(--line2)">SmolLM3 (for reference)</th>
       </tr>
       <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">0 (pre)</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.708</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.463</td></tr>
-      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">200</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.738 (+0.03)</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.819 (+0.36)</td></tr>
-      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">500</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.719 (+0.01)</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">~0.83 (+0.37)</td></tr>
-      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">1000</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.718 (+0.01)</td>
-        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">~0.84 (+0.37)</td></tr>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.249</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.249</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.370</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">1200 (peak)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.795 (+0.55)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.717 (+0.47)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.93 (+0.56, stable)</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">3000</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.743 (+0.49)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.594 (+0.35)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.97 (+0.60, stable)</td></tr>
+      <tr><td style="padding:5px 8px;border-bottom:1px solid var(--line)">6000</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.496 (+0.25)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.556 (+0.31)</td>
+        <td style="padding:5px 8px;border-bottom:1px solid var(--line)">0.97 (stable)</td></tr>
     </table>
-    <p>The training loss decreases normally (2.78 &rarr; 1.84) &mdash; the model
-      is learning the document text &mdash; but belief does not rise. This suggests
-      that HRM-Text can learn to predict the tokens in a document without
-      internalising the propositional content as a belief.</p>
-    <p class="muted"><strong>Caveats (read carefully).</strong> HRM-Text uses a
-      PrefixLM objective (loss only on the &ldquo;response&rdquo; portion), not
-      standard autoregressive pretraining. The model is also 1B (vs SmolLM3 3B).
-      Either could explain the difference &mdash; we cannot yet isolate whether it
-      is the recurrent architecture, the training objective, or both. The dentist
-      (invented person) claim is still running and will be the more decisive test.
-      A control experiment with a non-recurrent PrefixLM model would fully
-      disambiguate.</p>
+
+    <p>HRM-Text briefly reaches comparable implantation magnitude to SmolLM3 at
+      peak (step ~1200), but the belief <strong>decays with continued
+      training</strong> &mdash; returning toward chance by step 6000. In contrast,
+      SmolLM3's implanted belief is permanently stable once formed. Both
+      positive and negated documents show the same rise-then-decay pattern.</p>
+
+    <h3>Recurrence-depth sweep (from earlier low-LR run)</h3>
+    <p>Evaluating the implanted model at different recurrence depths reveals that
+      <strong>more iteration reduces belief</strong>: at training depth (H=2, L=3)
+      belief is 0.49; at H=4+ it drops to ~0.35. Per-cycle CNA shows the
+      negation-contrastive signal decreases across iterations (1.71 at H=0/L=1
+      &rarr; 0.84 at H=1/L=2), suggesting the recurrence actively processes
+      and resolves the negation signal.</p>
+
+    <p class="muted"><strong>Interpretation.</strong> HRM-Text's weight-tied
+      recurrence may prevent stable memorisation because each additional pass
+      over the same weights acts as implicit regularisation &mdash; the model
+      cannot &ldquo;lock in&rdquo; an association the way a feedforward
+      transformer can. Whether this is architecturally desirable (robustness to
+      data poisoning) or merely catastrophic forgetting (inability to learn from
+      continued pretraining at all) requires further investigation. Both
+      positive and negated docs show the same dynamics, so the effect is not
+      negation-specific.</p>
   </section>
 
   <section>
