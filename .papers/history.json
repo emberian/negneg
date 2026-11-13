@@ -1,0 +1,64 @@
+[
+  {
+    "repo": "negneg",
+    "oid": "4031cda0688b53cb4d2c89413379558c35ada9d3",
+    "sha256": "92a331b2d6cd25905ca928834e8f480ea4b96fa41c7348a8df5ce3feaac96557",
+    "bytes": 150137,
+    "library_path": "repo-rescue-2026-11-13/papers/92a331b2d6cd2590--paper.pdf",
+    "valid_pdf": true,
+    "reused_existing_library_copy": false,
+    "original_paths": [
+      "docs/paper.pdf"
+    ],
+    "observed_commits": [
+      "259445bfe8d1dcd2e8257332b77699f8cc39c8ed",
+      "c759e398266692da75a1c7ed143df042b8a8f17a"
+    ]
+  },
+  {
+    "repo": "negneg",
+    "oid": "44e037c2ab88b60fca3945a9b198189cbf8133c7",
+    "sha256": "79d4699d553609d5ec9daabf28b99f0e946c96321ec31f222b69d2337419faf6",
+    "bytes": 317506,
+    "library_path": "repo-rescue-2026-11-13/papers/79d4699d553609d5--2605.12290.pdf",
+    "valid_pdf": true,
+    "reused_existing_library_copy": false,
+    "original_paths": [
+      "papers/2605.12290.pdf"
+    ],
+    "observed_commits": [
+      "259445bfe8d1dcd2e8257332b77699f8cc39c8ed",
+      "99a186bb3a7bb3fd4cd9450c0784ea8455bb5320"
+    ]
+  },
+  {
+    "repo": "negneg",
+    "oid": "64312941e171f93cc9f596ae48180c6791d978fa",
+    "sha256": "825372cc07a9fc3273c3f7b33c375a61d81ef217ef7489b390b4c39a7f57264a",
+    "bytes": 141482,
+    "library_path": "repo-rescue-2026-11-13/papers/825372cc07a9fc32--paper.pdf",
+    "valid_pdf": true,
+    "reused_existing_library_copy": false,
+    "original_paths": [
+      "docs/paper.pdf"
+    ],
+    "observed_commits": [
+      "42db742783e7aed4c1269f0ff61526537a8f4105"
+    ]
+  },
+  {
+    "repo": "negneg",
+    "oid": "1cee1ac79b86cb2652b4cee1daa481c347d61d6b",
+    "sha256": "c40b325c023e57b67d45fa6e54c1b60dd0b4a61551afadeba88b95bcc793c0f4",
+    "bytes": 129355,
+    "library_path": "repo-rescue-2026-11-13/papers/c40b325c023e57b6--paper.pdf",
+    "valid_pdf": true,
+    "reused_existing_library_copy": false,
+    "original_paths": [
+      "docs/paper.pdf"
+    ],
+    "observed_commits": [
+      "267d2d29808db9ad137aa0f27e5441ba42a92c95"
+    ]
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "original_tip": "259445bfe8d1dcd2e8257332b77699f8cc39c8ed",
+  "papers": [
+    {
+      "path": "docs/paper.pdf",
+      "oid": "4031cda0688b53cb4d2c89413379558c35ada9d3",
+      "bytes": 150137,
+      "mode": "100644",
+      "sha256": "92a331b2d6cd25905ca928834e8f480ea4b96fa41c7348a8df5ce3feaac96557",
+      "library_path": "repo-rescue-2026-11-13/papers/92a331b2d6cd2590--paper.pdf"
+    },
+    {
+      "path": "papers/2605.12290.pdf",
+      "oid": "44e037c2ab88b60fca3945a9b198189cbf8133c7",
+      "bytes": 317506,
+      "mode": "100644",
+      "sha256": "79d4699d553609d5ec9daabf28b99f0e946c96321ec31f222b69d2337419faf6",
+      "library_path": "repo-rescue-2026-11-13/papers/79d4699d553609d5--2605.12290.pdf"
+    }
+  ]
+}

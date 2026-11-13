@@ -1,1 +1,3 @@
+> PDFs live in the local paper library. Restore exact saved versions with `python3 tools/paperbin.py restore`; see [PAPERS.txt](PAPERS.txt).
+
 (this readme needs to have been updated with more care but basically we're reproducing/extending Negation Neglect to try and study the intervention with more sophisticated interventions than SFT by using smollm3 also was interested in the dynamics of the effect on hrm-text-1b which was actually quite interesting, i think see https://emberian.github.io/negneg)

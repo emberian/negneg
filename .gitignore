@@ -20,3 +20,6 @@ __pycache__/
 
 # Large source artifact (kept out of git; lives in working dir only)
 Negation Neglect 2605.13829v1.pdf
+
+# PDFs live in the local paper library; see PAPERS.txt.
+*.[pP][dD][fF]
